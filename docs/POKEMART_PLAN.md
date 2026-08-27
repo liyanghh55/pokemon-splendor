@@ -68,8 +68,8 @@
   · 交互子选择弹窗 `#choice-modal` + `pickCards()`：关联选卡、免费取卡（递归子选择）、弃 2 张购买、
     弃图鉴抵款（不够球时自动提示）；`gatherCaptureOpts()` 收集 opts 后再 `actionCapture`；
   · 玩家区按「有效奖励色」分组展示（关联卡/双奖励正确归色，无色效果卡单独成组）；
-  · AI：沿用 `legalActions`，自动会用 药水/图鉴/驱虫/进化石 四类（免费取卡类需 UI，AI 暂不取）；
-  · 验证：40 局 AI 对 AI 全部正常结束、零崩溃；4 个测试套件全过（engine13/megas7/pokemart17/ai）。
+  · AI：完整枚举 6 类道具的选择参数，包括图鉴抵款、TM 关联色、驱虫弃牌组合、神奇糖果/进化石递归免费取卡；
+  · 验证：2/3/4 人 PokéMart 与组合扩展均可 headless 完局；`ai_expansions.test.js` 覆盖复杂行动与非法动作回归。
 
 **Pokémart 扩展至此功能完整（引擎 + UI + AI + 测试，opt-in，关闭时零影响）。**
 

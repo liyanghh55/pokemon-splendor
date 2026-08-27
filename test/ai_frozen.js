@@ -266,4 +266,3 @@
            DEFAULT_W, getWeights: () => Object.assign({}, W),
            setWeights: (w) => { W = Object.assign({}, DEFAULT_W, w); } };
 });
-

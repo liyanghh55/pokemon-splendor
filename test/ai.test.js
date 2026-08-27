@@ -67,4 +67,18 @@ const avgRounds = lengths.reduce((a, b) => a + b, 0) / lengths.length;
 console.log(`  ✓ avg AI-vs-AI game length ~${avgRounds.toFixed(1)} rounds`);
 assert.ok(avgRounds >= 8 && avgRounds <= 60, 'game length sane');
 
+// 5) one-evolution-per-turn is reflected without devaluing the first route
+const queued = E.createGame(DB, { numPlayers: 2, seed: 1199 });
+for (const tier in queued.field) queued.field[tier].fill(null);
+const qPlayer = queued.players[0];
+qPlayer.board = ['s1_04', 's1_12'];
+queued.field.stage2[0] = DB.find(c => c.tier === 'stage2' && c.name === queued.byId.s1_04.evolvesTo).id;
+queued.field.stage2[1] = DB.find(c => c.tier === 'stage2' && c.name === queued.byId.s1_12.evolvesTo).id;
+const queueOff = Object.assign({}, AI.DIFF.hard, { queueAware: false });
+const queueOn = Object.assign({}, AI.DIFF.hard, { queueAware: true });
+assert.ok(AI.evalState(queued, 0, queueOn) < AI.evalState(queued, 0, queueOff), 'later queued evolutions are discounted');
+const single = E.clone(queued); single.players[0].board = ['s1_04']; single.field.stage2[1] = null;
+assert.strictEqual(AI.evalState(single, 0, queueOn), AI.evalState(single, 0, queueOff), 'the first evolution keeps full value');
+console.log('  ✓ evolution queue discounts only the second and later routes');
+
 console.log('\nAI tests passed.');

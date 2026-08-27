@@ -15,7 +15,7 @@
   --sa-b:env(safe-area-inset-bottom,0px);
   --sa-l:env(safe-area-inset-left,0px);
   --dock-h:0px;                 /* live height of the mobile control dock (set by JS) */
-  --app-h:100vh; --app-h:100svh;/* small-viewport height: fits on first paint, no jump */
+  --app-h:100vh; --app-h:100svh; --app-h:100dvh;/* follow the visible mobile viewport */
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -34,6 +34,7 @@ body{
 }
 .screen{min-height:100vh;min-height:var(--app-h)}
 .hidden{display:none !important}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 
 /* touch hygiene: instant taps, no accidental text-select / long-press callout on controls */
 button,.seg button,.supply-row,.card,.deck-pile,.mini-card,.ball,.chip,.evo-option,.seat .pid,#undo-btn,.exp-toggle{
@@ -45,9 +46,11 @@ button,.seg button,.supply-row,.card,.deck-pile,.mini-card,.ball,.chip,.evo-opti
 button{font-family:inherit;cursor:pointer;border:none;border-radius:10px;font-size:14px;padding:10px 14px;min-height:40px;transition:.15s transform,.15s background,.15s box-shadow}
 button:active{transform:translateY(1px)}
 .primary{background:linear-gradient(180deg,#ffd54a,#f6b800);color:#3a2a00;font-weight:800;box-shadow:0 4px 0 #b88600}
+.tutorial-featured{background:linear-gradient(135deg,#fff0a8,#ffd54a 55%,#f6b800);color:#3a2a00;font-weight:900;border:1px solid #ffe98b;box-shadow:0 4px 0 #a87700}
 .ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .small{padding:7px 11px;font-size:13px;min-height:34px}
 button:disabled{opacity:.45;cursor:not-allowed}
+:where(button,[role="button"],input,select):focus-visible{outline:3px solid #fff;outline-offset:3px}
 @media (hover:hover) and (pointer:fine){
   .primary:hover{filter:brightness(1.05)}
   .ghost:hover{background:var(--panel2)}
@@ -55,7 +58,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 /* ---------- setup ---------- */
 #setup,#lobby{display:grid;place-items:center;padding:max(16px,var(--sa-t)) max(16px,var(--sa-r)) max(16px,var(--sa-b)) max(16px,var(--sa-l))}
-.setup-card{background:rgba(20,25,70,.82);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:20px;padding:clamp(20px,5vw,34px);max-width:560px;width:100%;box-shadow:var(--shadow)}
+.setup-card{background:linear-gradient(155deg,rgba(28,35,92,.92),rgba(18,22,61,.88));backdrop-filter:blur(10px);border:1px solid rgba(106,118,215,.55);border-radius:22px;padding:clamp(20px,5vw,34px);max-width:580px;width:100%;box-shadow:0 22px 70px rgba(3,5,20,.5),inset 0 1px rgba(255,255,255,.06)}
 .brand{font-size:clamp(26px,8vw,40px);margin:0 0 6px;text-align:center;letter-spacing:1px;line-height:1.1}
 .brand-splendor{color:var(--gold);text-shadow:0 2px 0 #9a6b00}
 .brand-dot{margin:0 6px;color:var(--muted)}
@@ -105,32 +108,53 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .setup-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:6px}
 .setup-actions .primary{padding:13px 30px;font-size:16px}
 .setup-actions .ghost{padding:13px 24px}
+.academy{margin-top:14px;padding:13px;border:1px solid rgba(255,213,74,.32);border-radius:15px;background:linear-gradient(120deg,rgba(255,213,74,.09),rgba(122,79,192,.11))}
+.academy-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.academy-head>div{display:flex;flex-direction:column;gap:2px}.academy-head strong{color:var(--gold);font-size:14px}.academy-head div span{color:var(--muted);font-size:11px}
+.academy-time{flex:none;color:#d9defc;font-size:10.5px;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:999px;padding:4px 8px}
+.setup-tutorials{margin-top:0}.setup-tutorials button{padding:11px 13px;min-height:48px}.setup-tutorials button small{display:block;font-size:9.5px;margin-top:2px;opacity:.75}
+.setup-tutorials button.completed{border-color:var(--good);box-shadow:inset 0 0 0 1px rgba(70,209,122,.18)}
+.setup-tutorials button.completed::after{content:"  ✓ 已完成";color:var(--good);font-size:10px;font-weight:800}
 .credit{margin-top:18px;text-align:center;color:var(--muted);font-size:12px;opacity:.7;line-height:1.5}
 .exp-toggle{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--muted);line-height:1.5;cursor:pointer;flex:1 1 100%}
-.exp-toggle input{width:20px;height:20px;flex:none;margin-top:1px}
+.exp-toggle input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--gold)}
+.exp-picker{border:0;margin:18px 0 16px;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.exp-picker legend{padding:0;margin:0 0 8px;color:var(--muted);font-size:13px;font-weight:800;letter-spacing:.5px}
+.exp-card{position:relative;display:flex;align-items:center;gap:10px;min-width:0;padding:12px;border:1px solid var(--line);border-radius:13px;background:rgba(17,22,58,.72);cursor:pointer;transition:.15s border-color,.15s background,.15s transform}
+.exp-card:hover{background:var(--panel)}.exp-card:active{transform:translateY(1px)}
+.exp-card:focus-within{outline:3px solid #fff;outline-offset:2px}.exp-card:has(input:checked){border-color:var(--gold);background:linear-gradient(110deg,rgba(255,213,74,.14),rgba(122,79,192,.12));box-shadow:inset 0 0 0 1px rgba(255,213,74,.2)}
+.exp-card input{width:21px;height:21px;flex:none;margin:0;accent-color:var(--gold)}
+.exp-icon{font-size:23px;line-height:1;flex:none}.exp-copy{display:flex;flex-direction:column;gap:3px;min-width:0}.exp-copy strong{font-size:14px;color:var(--ink)}.exp-copy small{font-size:10px;color:var(--gold);font-weight:800}.exp-copy>span{font-size:11.5px;line-height:1.45;color:var(--muted)}
+@media(max-width:520px){.exp-picker{grid-template-columns:1fr}.exp-card{padding:11px}.setup-card{padding:20px 16px}}
 
 /* ---------- modal ---------- */
-.modal{position:fixed;inset:0;background:rgba(6,8,24,.7);display:grid;place-items:center;z-index:60;padding:max(16px,var(--sa-t)) 16px max(16px,var(--sa-b))}
-.modal-box{background:var(--bg1);border:1px solid var(--line);border-radius:18px;padding:clamp(18px,4vw,28px);max-width:640px;width:100%;box-shadow:var(--shadow);max-height:88svh;overflow:auto}
+.modal{position:fixed;inset:0;background:rgba(6,8,24,.76);display:grid;place-items:center;z-index:60;padding:max(16px,var(--sa-t)) 16px max(16px,var(--sa-b))}
+.modal-box{background:var(--bg1);border:1px solid var(--line);border-radius:18px;padding:clamp(18px,4vw,28px);max-width:640px;width:100%;box-shadow:0 22px 70px rgba(0,0,0,.6);max-height:88svh;max-height:88dvh;overflow:auto}
 .modal-box h2{margin:0 0 14px;color:var(--gold)}
 .rules-body{line-height:1.7;color:var(--ink);font-size:clamp(14px,3.6vw,16px)}
 .rules-body ul{margin:6px 0 6px 0;padding-left:20px}
 .rules-body li{margin:4px 0}
 .rules-body b{color:var(--gold)}
-.modal-box .primary{margin-top:16px}
+.rules-exp{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:rgba(17,22,58,.6);padding:10px 12px}.rules-exp summary{cursor:pointer;color:#7cf0b2;font-weight:800}.rules-exp[open] summary{margin-bottom:8px}
+.modal-box > .primary{margin-top:16px}
 
 /* ---------- game shell ---------- */
 #game{min-height:var(--app-h)}
-#topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(8px + var(--sa-t)) max(14px,var(--sa-r)) 8px max(14px,var(--sa-l));background:rgba(10,13,40,.78);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;backdrop-filter:blur(6px)}
-.brand-mini{font-weight:800;color:var(--gold);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(8px + var(--sa-t)) max(14px,var(--sa-r)) 8px max(14px,var(--sa-l));background:rgba(10,13,40,.88);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;backdrop-filter:blur(10px)}
+.brand-mini{display:block;max-width:240px;font-weight:800;color:var(--gold);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #turn-banner{font-weight:800;font-size:clamp(13px,3.6vw,16px);padding:6px 14px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);text-align:center;flex:1 1 auto;min-width:0}
-.topbar-left,.topbar-right{flex:0 0 auto}
+.topbar-left,.topbar-right{flex:0 1 auto;min-width:0}
+#score-strip{display:none}
+.score-pill{display:flex;align-items:center;gap:5px;min-width:0;padding:5px 9px;border:1px solid var(--line);border-radius:999px;background:rgba(17,22,58,.82);font-size:11px;color:var(--muted)}
+.score-pill.active{border-color:var(--gold);background:rgba(255,213,74,.12);box-shadow:0 0 0 1px rgba(255,213,74,.15)}
+.score-dot{width:9px;height:9px;border-radius:50%;flex:none}.score-name{max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:700}
+.score-pill b{color:var(--gold);font-size:14px}.score-pill small{font-size:9px}.score-balls{white-space:nowrap}
 #board{min-width:0}
-#field{display:flex;flex-direction:column;gap:10px}
+#field{display:flex;flex-direction:column;gap:10px;container-type:inline-size;container-name:game-field}
 #controls{display:flex;flex-direction:column;gap:14px}
 
 /* desktop / large tablet: board left, controls + log right, players full-width */
-@media (min-width:861px){
+@media (min-width:1000px){
   #game{display:grid;gap:14px;padding:14px;
     grid-template-columns:minmax(0,1fr) 340px;
     grid-template-areas:
@@ -140,10 +164,19 @@ button:disabled{opacity:.45;cursor:not-allowed}
       "players players";}
   #topbar{grid-area:topbar;margin:-14px -14px 0;border-radius:0}
   #board{grid-area:board}
-  #controls{grid-area:controls}
+  #controls{grid-area:controls;position:sticky;top:62px;align-self:start;max-height:calc(100dvh - 76px);overflow:auto;overscroll-behavior:contain}
   #log{grid-area:log;align-self:start}
   #players{grid-area:players}
-  #inspect{display:none !important}
+  #action-bar{position:sticky;top:0;z-index:4;box-shadow:0 10px 24px rgba(7,9,28,.35)}
+  #score-strip{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0;overflow-x:auto;scrollbar-width:none}
+  #score-strip::-webkit-scrollbar{display:none}
+  .topbar-left{display:none}
+  #turn-banner{flex:0 1 280px}
+}
+@media (max-width:520px){
+  .topbar-left{display:none}
+  #topbar{padding-left:max(9px,var(--sa-l));padding-right:max(9px,var(--sa-r))}
+  #turn-banner{padding-inline:10px}
 }
 
 /* field rows */
@@ -157,8 +190,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .deck-pile[data-tier="stage3"]{background-image:linear-gradient(rgba(8,10,30,.40),rgba(8,10,30,.62)),url(../assets/backs/stage3.webp)}
 .deck-pile[data-tier="rare"]{background-image:linear-gradient(rgba(8,10,30,.40),rgba(8,10,30,.62)),url(../assets/backs/rare.webp)}
 .deck-pile[data-tier="legend"]{background-image:linear-gradient(rgba(8,10,30,.40),rgba(8,10,30,.62)),url(../assets/backs/legend.webp)}
-/* Pokémart has no TTS back → CSS-generated green "shop" back (layered gradients for depth) */
-.deck-pile[data-tier="pmL1"],.deck-pile[data-tier="pmL2"],.deck-pile[data-tier="pmL3"]{background-image:linear-gradient(135deg,rgba(46,209,122,.25),rgba(76,175,80,.15) 50%,rgba(46,209,122,.20)),radial-gradient(circle at 30% 70%,rgba(76,175,80,.10),transparent 60%),linear-gradient(160deg,#0d3a1a,#1a5c2a 40%,#0f4620)}
+/* PokéMart uses a distinct supplied back for each shop level. */
+.deck-pile[data-tier="pmL1"]{background-image:linear-gradient(rgba(8,10,30,.12),rgba(8,10,30,.28)),url(../assets/backs/pokemart-1.png)}
+.deck-pile[data-tier="pmL2"]{background-image:linear-gradient(rgba(8,10,30,.12),rgba(8,10,30,.28)),url(../assets/backs/pokemart-2.png)}
+.deck-pile[data-tier="pmL3"]{background-image:linear-gradient(rgba(8,10,30,.12),rgba(8,10,30,.28)),url(../assets/backs/pokemart-3.png)}
 /* count → small corner badge so the back art reads (min-width fits 2-digit counts like 35) */
 .deck-pile .count{position:absolute;top:6px;right:7px;font-weight:800;font-size:13px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.85);background:rgba(0,0,0,.5);border-radius:8px;min-width:24px;height:23px;display:flex;align-items:center;justify-content:center;padding:0 5px;z-index:2}
 .deck-pile.reservable{cursor:pointer;border-style:solid}
@@ -167,6 +202,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 /* card */
 .card{width:var(--card-w);height:var(--card-h);border-radius:9px;overflow:hidden;position:relative;flex:none;cursor:pointer;background:#0c1030;border:2px solid transparent;box-shadow:0 3px 8px rgba(0,0,0,.4);transition:.12s transform,.12s box-shadow}
+.card.pm-card,.tier-pokemart .deck-pile{height:calc(var(--card-w) * 1.545)}
+.card.pm-card img{object-fit:cover;object-position:center;background:#61c9dc}
+.card.pm-card.pm-locked:not(.selected){filter:saturate(.72) brightness(.86)}
 .card img{width:100%;height:100%;display:block;object-fit:cover}
 .card.affordable{border-color:var(--good);box-shadow:0 0 0 2px rgba(70,209,122,.5),0 6px 14px rgba(0,0,0,.4)}
 /* affordable, but the purchase would spend Master Balls (百搭): purple tier + a
@@ -217,18 +255,21 @@ button:disabled{opacity:.45;cursor:not-allowed}
 @media (hover:hover) and (pointer:fine){ .supply-row:not(.disabled):hover{background:var(--panel2)} }
 
 /* ---------- action bar ---------- */
-#action-bar{min-height:84px}
+#action-bar{min-height:84px;border-color:rgba(255,213,74,.38);background:linear-gradient(145deg,rgba(42,50,112,.96),rgba(27,33,78,.96))}
+body.has-card-selection #action-bar{border-color:var(--gold);box-shadow:0 0 0 1px rgba(255,213,74,.18),0 10px 26px rgba(0,0,0,.28)}
 .act-hint{color:var(--muted);font-size:13px;margin-bottom:8px;line-height:1.5}
 .act-buttons{display:flex;flex-wrap:wrap;gap:8px}
 .act-buttons button{flex:1 1 auto;min-width:96px}
 .act-buttons .primary{min-height:48px}
 .tray{display:flex;gap:6px;align-items:center;margin:8px 0;min-height:38px;flex-wrap:wrap}
 .tray .ball[data-discard]{width:44px;height:44px;cursor:pointer}
+.tray .tray-pick{padding:0;border:2px solid var(--gold);min-height:0;flex:none;box-shadow:0 2px 7px rgba(0,0,0,.4)}
 .evo-option{width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:8px;min-height:48px}
 .evo-option b{color:var(--gold)}
 @media (hover:hover) and (pointer:fine){ .evo-option:hover{border-color:var(--gold)} }
 /* selected-card preview inside the action bar (read the card while you act) */
 .sel-preview{float:right;width:calc(var(--card-w) * 1.5);height:auto;aspect-ratio:3/4;border-radius:9px;border:2px solid var(--gold);margin:0 0 6px 10px;box-shadow:0 4px 12px rgba(0,0,0,.5);cursor:zoom-in}
+.sel-preview.pm-card{aspect-ratio:647/1000;object-fit:cover;object-position:center;background:#61c9dc}
 
 /* ---------- purchase ledger (payment breakdown when a card is selected) ---------- */
 .pay-ledger{clear:both;margin:6px 0 8px;background:#11163a;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
@@ -267,12 +308,14 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #my-resources{display:flex;flex-direction:column;gap:7px}
 .mc-label{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mychips{display:flex;flex-wrap:wrap;gap:6px}
-.mychip{display:flex;align-items:center;gap:3px;background:#11163a;border:1px solid var(--line);border-radius:16px;padding:3px 9px 3px 4px;font-size:13px;min-height:30px}
-.mychip .mc-tok{font-weight:800;min-width:10px;text-align:center}
-.mychip .mc-bon{color:var(--good);font-weight:800;font-size:12px}
+.mychip{display:grid;grid-template-columns:auto auto;grid-template-rows:1fr 1fr;align-items:center;column-gap:4px;background:#11163a;border:1px solid var(--line);border-radius:13px;padding:3px 8px 3px 4px;font-size:12px;min-height:38px}
+.mychip .ball{grid-row:1/3}
+.mychip .mc-tok,.mychip .mc-bon{display:flex;align-items:baseline;gap:3px;line-height:1.05;font-weight:800;min-width:30px}
+.mychip .mc-tok small,.mychip .mc-bon small{font-size:8px;color:var(--muted);font-weight:700}
+.mychip .mc-bon{color:var(--good);font-size:11px}
+.mychip.master,.mychip.mega{grid-template-rows:1fr}.mychip.master .ball,.mychip.mega .ball{grid-row:auto}.mychip.master .mc-tok,.mychip.mega .mc-tok{font-size:13px}
 
 /* ---------- guided tutorial (新手教程) ---------- */
-.setup-tutorials{margin-top:10px}
 .setup-tutorials button{flex:1 1 auto}
 #tut-mask{position:fixed;z-index:78;border-radius:12px;pointer-events:none;
   box-shadow:0 0 0 3px var(--gold), 0 0 0 9999px rgba(4,6,20,.66);
@@ -281,7 +324,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #tut-bubble{position:fixed;z-index:80;left:50%;transform:translateX(-50%);
   top:calc(var(--sa-t) + 58px);width:min(440px, calc(100vw - 20px));
   background:var(--bg1);border:1px solid var(--gold);border-radius:16px;
-  padding:14px 16px;box-shadow:0 14px 44px rgba(0,0,0,.55)}
+  padding:14px 16px;box-shadow:0 14px 44px rgba(0,0,0,.55);
+  max-height:calc(100dvh - var(--sa-t) - var(--sa-b) - 18px);overflow:auto;overscroll-behavior:contain}
 #tut-bubble.hidden{display:none}
 #tut-step{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:1.5px;margin-bottom:4px}
 #tut-title{font-size:17px;font-weight:800;color:var(--gold);margin-bottom:6px;line-height:1.3}
@@ -291,9 +335,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #tut-actions .primary{min-height:44px}
 .tut-hint{font-size:12px;color:var(--muted);flex:1 1 auto}
 .tut-hide-endturn [data-act="end-turn"]{display:none !important}
+body.tutorial-choice-open #choice-modal{z-index:90}
+body.tutorial-choice-open #tut-mask,body.tutorial-choice-open #tut-bubble{visibility:hidden}
 
 /* ---------- rotate-for-landscape hint (dismissible, phones in portrait) ---------- */
-#rotate-hint{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--sa-t) + 54px);z-index:50;
+#rotate-hint{margin:6px auto 0;z-index:29;align-self:center;
   background:rgba(10,13,40,.95);border:1px solid var(--gold);color:var(--ink);border-radius:22px;
   padding:8px 8px 8px 14px;font-size:13px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow);backdrop-filter:blur(6px)}
 #rotate-hint .ti{color:var(--gold)}
@@ -326,29 +372,33 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .ptokens.over{border-color:var(--bad);color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
 .ptokens.over small{color:var(--bad)}
 .pstats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-.chip{display:flex;align-items:center;gap:4px;background:#11163a;border:1px solid var(--line);border-radius:20px;padding:3px 9px 3px 4px;font-size:13px}
-.chip .num{font-weight:800;min-width:12px;text-align:center}
-.chip .bonus-n{color:var(--good);font-weight:800}
+.chip{display:grid;grid-template-columns:auto auto;grid-template-rows:1fr 1fr;align-items:center;column-gap:4px;background:#11163a;border:1px solid var(--line);border-radius:13px;padding:3px 8px 3px 4px;font-size:11px;min-height:38px}
+.chip .ball{grid-row:1/3}.chip .num,.chip .bonus-n{display:flex;align-items:baseline;gap:3px;line-height:1.05;font-weight:800;min-width:30px}
+.chip .num small,.chip .bonus-n small{font-size:8px;color:var(--muted);font-weight:700}.chip .bonus-n{color:var(--good)}
+.chip.master{display:flex;border-radius:20px;min-height:30px}.chip.master .ball{grid-row:auto}.chip.master .num{min-width:auto;font-size:13px}
 .pcards{display:flex;gap:6px;flex-wrap:wrap}
 .color-stack{position:relative}
 .color-stack .ministack{display:flex;flex-direction:column}
 .mini-card{width:42px;height:56px;border-radius:5px;overflow:hidden;border:1px solid #000;box-shadow:0 1px 3px rgba(0,0,0,.5);cursor:pointer}
 .mini-card img{width:100%;height:100%;object-fit:cover}
+.mini-card.pm-mini img{object-fit:cover;object-position:center;background:#61c9dc}
 .mini-card.stacked{margin-top:-44px}
-/* face-down reserve backs: real tier art (base) / green CSS back (Pokémart) */
+/* face-down reserve backs: tier-correct art for base and PokéMart cards */
 .mini-card.card-back{background:linear-gradient(135deg,#3a2a6e,#221a4a) center/cover no-repeat}
 .mini-card.card-back[data-tier="stage1"]{background-image:linear-gradient(rgba(8,10,30,.5),rgba(8,10,30,.65)),url(../assets/backs/stage1.webp)}
 .mini-card.card-back[data-tier="stage2"]{background-image:linear-gradient(rgba(8,10,30,.5),rgba(8,10,30,.65)),url(../assets/backs/stage2.webp)}
 .mini-card.card-back[data-tier="stage3"]{background-image:linear-gradient(rgba(8,10,30,.5),rgba(8,10,30,.65)),url(../assets/backs/stage3.webp)}
 .mini-card.card-back[data-tier="rare"]{background-image:linear-gradient(rgba(8,10,30,.5),rgba(8,10,30,.65)),url(../assets/backs/rare.webp)}
 .mini-card.card-back[data-tier="legend"]{background-image:linear-gradient(rgba(8,10,30,.5),rgba(8,10,30,.65)),url(../assets/backs/legend.webp)}
-.mini-card.card-back[data-tier="pmL1"],.mini-card.card-back[data-tier="pmL2"],.mini-card.card-back[data-tier="pmL3"]{background-image:linear-gradient(135deg,rgba(46,209,122,.3),rgba(76,175,80,.2) 50%,rgba(46,209,122,.25)),linear-gradient(160deg,#0d3a1a,#1a5c2a 40%,#0f4620)}
+.mini-card.card-back[data-tier="pmL1"]{background-image:linear-gradient(rgba(8,10,30,.16),rgba(8,10,30,.3)),url(../assets/backs/pokemart-1.png)}
+.mini-card.card-back[data-tier="pmL2"]{background-image:linear-gradient(rgba(8,10,30,.16),rgba(8,10,30,.3)),url(../assets/backs/pokemart-2.png)}
+.mini-card.card-back[data-tier="pmL3"]{background-image:linear-gradient(rgba(8,10,30,.16),rgba(8,10,30,.3)),url(../assets/backs/pokemart-3.png)}
 .reserve-zone{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px}
 .reserve-zone .rz-title{font-size:11px;color:var(--muted);margin-bottom:4px}
 .buried-badge{position:absolute;top:8px;right:10px;font-size:11px;color:var(--muted)}
 
 /* turn passing overlay (hotseat) */
-#pass-overlay{position:fixed;inset:0;background:rgba(6,8,24,.94);z-index:55;display:grid;place-items:center;text-align:center;padding:24px}
+#pass-overlay{position:fixed;inset:0;background:rgba(6,8,24,.96);z-index:95;display:grid;place-items:center;text-align:center;padding:24px}
 #pass-overlay .po-inner{max-width:420px}
 #pass-overlay h2{font-size:clamp(22px,6vw,26px);margin:0 0 6px}
 #pass-overlay p{color:var(--muted)}
@@ -361,15 +411,19 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 /* desktop hover zoom preview */
 #zoom{position:fixed;z-index:80;pointer-events:none;filter:drop-shadow(0 10px 30px rgba(0,0,0,.6))}
-#zoom img{width:260px;height:347px;border-radius:14px;border:2px solid var(--gold)}
+#zoom img{width:260px;height:347px;object-fit:contain;background:#0c1030;border-radius:14px;border:2px solid var(--gold)}
 
 /* tap-to-inspect overlay (touch) */
-#inspect{position:fixed;inset:0;z-index:85;background:rgba(6,8,24,.86);display:flex;align-items:center;justify-content:center;
-  padding:max(20px,var(--sa-t)) max(20px,var(--sa-r)) max(20px,var(--sa-b)) max(20px,var(--sa-l))}
-#inspect-inner{display:flex;flex-direction:column;align-items:center;gap:16px;max-width:100%}
-#inspect-img{width:min(78vw,340px);height:auto;aspect-ratio:3/4;border-radius:14px;border:3px solid var(--gold);box-shadow:0 18px 50px rgba(0,0,0,.65);background:#0c1030}
+#inspect{position:fixed;inset:0;z-index:85;background:rgba(6,8,24,.9);display:flex;align-items:flex-start;justify-content:center;overflow:auto;overscroll-behavior:contain;
+  padding:max(16px,var(--sa-t)) max(16px,var(--sa-r)) max(16px,var(--sa-b)) max(16px,var(--sa-l))}
+#inspect-inner{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:100%;margin:auto}
+#inspect-img{width:auto;height:auto;max-width:min(88vw,390px);max-height:calc(100dvh - 110px);object-fit:contain;border-radius:14px;border:3px solid var(--gold);box-shadow:0 18px 50px rgba(0,0,0,.65);background:#0c1030}
 #inspect-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 #inspect-actions button{padding:13px 22px;font-size:15px;min-height:48px}
+
+/* global feedback stays visible even when the setup/lobby screen is active */
+.toast{position:fixed;z-index:120;left:50%;bottom:calc(22px + var(--sa-b));transform:translateX(-50%);width:max-content;max-width:min(520px,calc(100vw - 28px));padding:11px 15px;border-radius:12px;background:#171c44;border:1px solid var(--line);box-shadow:0 12px 34px rgba(0,0,0,.55);font-size:13px;font-weight:700;line-height:1.45;text-align:center;pointer-events:none}
+.toast.error{border-color:var(--bad);color:#ffd9dd}.toast.success{border-color:var(--good);color:#baf7d2}
 
 /* win modal */
 .modal-box.win{text-align:center}
@@ -385,8 +439,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
 /* ============================================================
    MOBILE / NARROW: single column + fixed bottom control dock
    ============================================================ */
-@media (max-width:860px){
+@media (max-width:999px){
   #game{display:flex;flex-direction:column;min-height:var(--app-h);padding-bottom:calc(var(--dock-h) + var(--sa-b) + 6px)}
+  #zoom{display:none !important}
   #board{order:1;padding:8px max(6px,var(--sa-r)) 0 max(6px,var(--sa-l))}
   #players{order:2;padding:10px max(8px,var(--sa-r)) 12px max(8px,var(--sa-l));grid-auto-flow:row;grid-auto-columns:auto;
     grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
@@ -396,13 +451,14 @@ button:disabled{opacity:.45;cursor:not-allowed}
   #controls{position:fixed;left:0;right:0;bottom:0;z-index:46;order:99;gap:6px;
     padding:6px max(8px,var(--sa-l)) calc(6px + var(--sa-b)) max(8px,var(--sa-r));
     background:rgba(10,13,40,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);
-    box-shadow:0 -8px 24px rgba(0,0,0,.4);max-height:54svh;overflow:auto}
+    box-shadow:0 -8px 24px rgba(0,0,0,.4);max-height:56svh;max-height:56dvh;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
   #controls .panel{padding:8px;border-radius:12px}
 
   /* supply as a compact horizontal strip of tappable ball-chips */
-  #supply{flex-direction:row;flex-wrap:nowrap;gap:6px;overflow-x:auto;overflow-y:hidden;padding:6px;
+  #supply{order:1;flex-direction:row;flex-wrap:nowrap;gap:6px;overflow-x:auto;overflow-y:hidden;padding:6px;
     scroll-snap-type:x proximity;overscroll-behavior-x:contain}
-  #supply::-webkit-scrollbar{height:0}
+  #supply::-webkit-scrollbar,.tier-row::-webkit-scrollbar{height:3px}
+  #supply::-webkit-scrollbar-thumb,.tier-row::-webkit-scrollbar-thumb{background:var(--line);border-radius:999px}
   #supply .panel-title{display:none}
   .supply-row{flex:0 0 auto;flex-direction:column;gap:1px;padding:5px 8px;min-width:50px;min-height:58px;justify-content:center;text-align:center;scroll-snap-align:start}
   .supply-row .name{display:none}
@@ -412,8 +468,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
   .act-hint{margin-bottom:6px}
 
   /* your-resources: single compact horizontal scroll row in the dock */
-  #my-resources{flex-direction:row;align-items:center;gap:8px;overflow-x:auto;overflow-y:hidden;padding:6px 8px}
-  #my-resources::-webkit-scrollbar{height:0}
+  #my-resources{order:2;flex-direction:row;align-items:center;gap:8px;overflow-x:auto;overflow-y:hidden;padding:6px 8px}
+  #my-resources::-webkit-scrollbar{height:3px}
+  #my-resources::-webkit-scrollbar-thumb{background:var(--line);border-radius:999px}
   .mc-label{flex:0 0 auto;font-size:10px}
   .mychips{flex-wrap:nowrap}
   .mychip{flex:0 0 auto}
@@ -421,13 +478,16 @@ button:disabled{opacity:.45;cursor:not-allowed}
   /* board rows scroll horizontally instead of wrapping */
   .tier-row{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:8px;padding:6px;
     scroll-snap-type:x proximity;overscroll-behavior-x:contain}
-  .tier-row::-webkit-scrollbar{height:0}
   .tier-label{position:sticky;left:0;z-index:2;writing-mode:horizontal-tb;text-orientation:mixed;width:auto;letter-spacing:1px;
     padding:2px 6px;border-radius:8px;background:var(--panel);align-self:stretch;display:flex;align-items:center}
   .card-strip{flex-wrap:nowrap}
   .card,.deck-pile{scroll-snap-align:start}
 
   .sel-preview{width:calc(var(--card-w) * 1.7)}
+  body.has-card-selection #supply,body.has-card-selection #my-resources{display:none !important}
+  body.has-card-selection #action-bar .act-buttons{position:sticky;bottom:-8px;z-index:3;margin:8px -8px -8px;padding:12px 8px 8px;background:linear-gradient(transparent,rgba(29,35,80,.98) 24%)}
+  body.has-card-selection .pay-ledger{max-height:132px;overflow:auto}
+  .toast{top:calc(var(--sa-t) + 58px);bottom:auto}
 }
 
 /* very small phones: shrink cards a touch more, 1 player per row */
@@ -437,9 +497,12 @@ button:disabled{opacity:.45;cursor:not-allowed}
 }
 
 /* landscape phone: keep the dock but allow wider rows */
-@media (max-width:860px) and (orientation:landscape){
-  #controls{max-height:62svh}
+@media (max-width:999px) and (orientation:landscape){
+  #controls{max-height:64svh;max-height:64dvh}
   #players{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+  #inspect-img{max-height:calc(100dvh - 92px);max-width:74vw}
+  #inspect-inner{flex-direction:row;align-items:center}
+  #inspect-actions{flex-direction:column;min-width:120px}
 }
 
 /* accessibility: respect reduced-motion */
@@ -460,28 +523,54 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .fly-card[data-tier="stage3"]{background-image:linear-gradient(rgba(8,10,30,.45),rgba(8,10,30,.6)),url(../assets/backs/stage3.webp)}
 .fly-card[data-tier="rare"]{background-image:linear-gradient(rgba(8,10,30,.45),rgba(8,10,30,.6)),url(../assets/backs/rare.webp)}
 .fly-card[data-tier="legend"]{background-image:linear-gradient(rgba(8,10,30,.45),rgba(8,10,30,.6)),url(../assets/backs/legend.webp)}
-.fly-card[data-tier="pmL1"],.fly-card[data-tier="pmL2"],.fly-card[data-tier="pmL3"]{background-image:linear-gradient(135deg,rgba(46,209,122,.28),rgba(76,175,80,.18) 50%,rgba(46,209,122,.23)),linear-gradient(160deg,#0d3a1a,#1a5c2a 40%,#0f4620)}
+.fly-card[data-tier="pmL1"]{background-image:linear-gradient(rgba(8,10,30,.12),rgba(8,10,30,.28)),url(../assets/backs/pokemart-1.png)}
+.fly-card[data-tier="pmL2"]{background-image:linear-gradient(rgba(8,10,30,.12),rgba(8,10,30,.28)),url(../assets/backs/pokemart-2.png)}
+.fly-card[data-tier="pmL3"]{background-image:linear-gradient(rgba(8,10,30,.12),rgba(8,10,30,.28)),url(../assets/backs/pokemart-3.png)}
 @keyframes recv{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
-.player.receiving{animation:recv .5s ease}
+.player.receiving,.score-pill.receiving,#turn-banner.receiving,#my-resources.receiving{animation:recv .5s ease}
 
 /* ---------- undo (悔棋) button ---------- */
 #undo-btn{position:fixed;bottom:calc(14px + var(--sa-b));left:calc(14px + var(--sa-l));z-index:40;background:linear-gradient(180deg,#3a4290,#2a3170);color:#fff;border:1px solid var(--line);box-shadow:var(--shadow);font-weight:700;padding:11px 16px;border-radius:12px;min-height:46px}
 #undo-btn .ti,#undo-btn i{margin-right:4px}
 @media (hover:hover) and (pointer:fine){ #undo-btn:hover{filter:brightness(1.1)} }
 /* mobile: lift the undo button above the fixed bottom dock (placed after the base rule so it wins source-order) */
-@media (max-width:860px){ #undo-btn{bottom:calc(var(--dock-h) + var(--sa-b) + 10px)} }
+@media (max-width:999px){ #undo-btn{bottom:calc(var(--dock-h) + var(--sa-b) + 10px)} }
 
-/* ===== Pokémart expansion ===== */
-.tier-pokemart{background:linear-gradient(90deg,rgba(46,209,122,.16),rgba(47,111,214,.10))}
-.tier-pokemart .tier-label{color:#46d17a}
+/* ===== PokéMart expansion ===== */
+.pokemart-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:18px 0 8px;padding:12px 15px;border:1px solid rgba(75,211,153,.32);border-radius:16px;background:linear-gradient(110deg,rgba(24,111,77,.42),rgba(29,65,116,.24));box-shadow:inset 0 1px rgba(255,255,255,.06)}
+.pokemart-brand{display:flex;align-items:center;gap:10px}.pokemart-brand strong{display:block;color:#7cf0b2;font-size:18px;letter-spacing:.02em}.pokemart-brand span{display:block;color:var(--muted);font-size:11px;margin-top:1px}.pokemart-brand .pokemart-bag{font-size:25px;margin:0}
+.pokemart-legend{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px;white-space:nowrap}.pm-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:5px}.pm-dot.ready{background:#5be091;box-shadow:0 0 7px #5be091}.pm-dot.wild{background:#b884ff}.pm-dot.locked{background:#697186}
+.tier-pokemart{position:relative;background:linear-gradient(90deg,rgba(46,209,122,.13),rgba(47,111,214,.08));border-color:rgba(75,211,153,.2)}
+.tier-pokemart .tier-label{color:#65dfa0;display:flex;flex-direction:column;line-height:1.05}.tier-pokemart .tier-label strong{font-size:13px}.tier-pokemart .tier-label span{font-size:10px;color:var(--muted);margin-top:5px;white-space:nowrap;letter-spacing:0}
+.tier-pokemart .card{transition:transform .16s ease,filter .16s ease,box-shadow .16s ease}.tier-pokemart .card.affordable{box-shadow:0 0 0 2px rgba(91,224,145,.75),0 5px 18px rgba(40,190,110,.2)}
 .eff-tag{color:var(--gold);font-size:12px;font-weight:700}
-.choice-title{font-size:18px;font-weight:800;color:var(--gold);margin-bottom:4px}
-.choice-hint{color:var(--muted);font-size:13px;margin-bottom:14px}
+.modal-box.choice{max-width:760px;border-color:rgba(244,192,37,.28)}
+.choice-title{font-size:20px;font-weight:800;color:var(--gold);margin-bottom:5px}
+.choice-meta{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}.choice-hint{color:var(--muted);font-size:13px}.choice-progress{flex:none;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.07);color:var(--muted);font-size:12px;font-weight:700}.choice-progress.complete{color:#75e9aa;background:rgba(55,190,118,.14)}
 .choice-cards{display:flex;flex-wrap:wrap;gap:10px;max-height:60vh;overflow:auto;justify-content:center}
-.choice-card{width:96px;border:2px solid transparent;border-radius:10px;cursor:pointer;padding:4px;background:rgba(255,255,255,.04);transition:border-color .12s,transform .12s;text-align:center}
+.choice-card{width:104px;border:2px solid transparent;border-radius:12px;cursor:pointer;padding:5px;background:rgba(255,255,255,.04);transition:border-color .12s,transform .12s,background .12s;text-align:center;touch-action:manipulation}
 .choice-card img{width:100%;border-radius:7px;display:block}
+.choice-card.pm-choice img{aspect-ratio:647/1000;object-fit:cover;object-position:center;background:#61c9dc}
 .choice-card span{display:block;font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.choice-card small{display:block;font-size:9px;line-height:1.35;color:var(--muted);margin-top:2px}
 .choice-card:hover{transform:translateY(-2px)}
 .choice-card.sel{border-color:var(--gold);box-shadow:0 0 10px rgba(244,192,37,.5)}
+.choice-card:focus-visible{outline:3px solid #fff;outline-offset:2px}
 .choice-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
 .choice-confirm:disabled,#choice-confirm:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:640px){
+  .pokemart-head{align-items:flex-start}.pokemart-legend{white-space:normal;justify-content:flex-end;flex-wrap:wrap}
+  .choice-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;justify-items:stretch}
+  .choice-card{width:auto;min-width:0}.choice-card span{font-size:12px;color:var(--ink)}.choice-card small{font-size:10px;white-space:normal}
+  .choice-meta{flex-direction:column}.choice-actions{position:sticky;bottom:-18px;background:linear-gradient(transparent,var(--bg1) 25%);padding-top:18px}.choice-actions button{min-height:46px;flex:1}
+}
+.pokemart-grid{display:flex;flex-direction:column;gap:10px}
+@container game-field (min-width:700px){
+  .pokemart-grid{--card-w:84px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .pokemart-grid .tier-pokemart{min-width:0;gap:7px;padding:7px}
+  .pokemart-grid .tier-label{writing-mode:horizontal-tb;text-orientation:mixed;width:38px;letter-spacing:0;align-self:stretch;align-items:center;justify-content:center}
+  .pokemart-grid .card-strip{flex-wrap:nowrap;gap:6px}
+}
+@container game-field (min-width:1040px){
+  .pokemart-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}

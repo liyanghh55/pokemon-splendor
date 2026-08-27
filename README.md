@@ -2,7 +2,7 @@
 
 一个可在浏览器中直接游玩的《璀璨宝石：宝可梦》网页版 —— 收集精灵球，捕捉并**进化**宝可梦，率先达到 **18 分**成为冠军训练家。
 
-支持 **2–4 人本地热座**（pass-and-play）、**电脑对手**（新手 / 普通 / 高手 / 究极四档）与**在线联机对战**（房间码 + 邀请链接）。另含两套可选**扩展**（超级进化 Megas、Pokémart 商店）、零基础**新手教程**、移动端 / PWA 适配与**本地存档续局**。
+支持 **2–4 人本地热座**（pass-and-play）、**电脑对手**（新手 / 普通 / 高手 / 究极四档）与**在线联机对战**（房间码 + 邀请链接）。另含两套可选**扩展**（超级进化 Megas、PokéMart 商店）、零基础**新手教程**、**Mega 教程**与覆盖 6 种道具的**PokéMart 互动教程**。
 
 > 卡牌美术与数值均源自 Tabletop Simulator 模组「**璀璨宝石：宝可梦（自动脚本）**」。由于模组只把分值写进卡面，本项目用视觉识别从 100 张原始卡面逐张提取了：捕捉成本、折扣球、奖杯点数、进化目标与进化花费，并经二次复核 + 标签交叉校验。
 
@@ -44,7 +44,7 @@ npx serve .
 开局界面勾选即可启用（可组合）：
 
 - **超级进化（Megas）**：第 4 级 Mega 卡 + Mega 代币。胜利改为需 **20 分 + 集齐每色 + 至少 1 只 Mega**。
-- **Pokémart 商店**：商店卡带交互效果（药水双效奖励 / 进化石关联 / 图鉴抵款 / 神奇糖果·技能机免费取卡 / 驱虫弃购）。
+- **PokéMart 商店**：每级额外展示 2 张道具。药水提供双折扣，技能机复制折扣，图鉴可抵款，神奇糖果与进化石可免费连锁取卡，驱虫喷雾可弃卡换分。
 
 ## 项目结构
 
@@ -52,17 +52,17 @@ npx serve .
 index.html          入口
 css/style.css       样式（含 CSS 绘制的精灵球 / 动画 / 联机大厅）
 js/engine.js        纯逻辑游戏引擎（规则 / 进化 / 计分 / 脱敏 / 合法动作），浏览器与 Node 通用
-js/ai.js            电脑对手（评估函数 + 进化感知的一层搜索；SPSA 自动调参权重）
-js/vsearch.js       「究极」难度：基于启发式先验的去随机化 MCTS（仅 2 人）
+js/ai.js            电脑对手（完整扩展行动规划 + 公共信息采样 + 路线/威胁/进化决策）
+js/vsearch.js       「究极」难度：可复现的信息集 MCTS（仅 2 人，极高分支时自适应回退）
 js/cards.js         卡牌数据库（自动生成，勿手改）
-js/megas.js         超级进化扩展 · js/pokemart.js  Pokémart 商店扩展
+js/megas.js         超级进化扩展 · js/pokemart.js  PokéMart 商店扩展
 js/net.js           联机客户端传输（window.Net：WebSocket + 心跳 + token 重连）
 js/room.js          联机房间权威（纯逻辑，浏览器与 Node 通用，可 headless 单测）
-js/tutorial.js      零基础新手教程（引导式）
+js/tutorial.js      基础 / Mega / PokéMart 三套交互教程
 js/ui.js            界面与交互
 worker/index.js     Cloudflare Worker 入口 + 每房间一个 Durable Object（仅加传输，规则全在 room.js）
 data/cards.json     卡牌数据库（供 Node 测试）· data/megas.json · data/pokemart.json
-assets/cards/       100 张卡面 + 牌背（+ Pokémart pm_01..30）
+assets/cards/       100 张基础卡面 + 30 张 PokéMart 卡面 + 牌背
 manifest.json sw.js PWA 清单与离线缓存
 test/               Node 单元测试（引擎 / AI / 扩展 / 联机房间）
 wrangler.jsonc      Cloudflare 部署配置（静态资源 + Durable Object + 自定义域名）
@@ -73,9 +73,10 @@ wrangler.jsonc      Cloudflare 部署配置（静态资源 + Durable Object + �
 ```bash
 node test/engine.test.js   # 引擎规则 + 100 局自走验证（含计分/进化/结束/筹码守恒/脱敏）
 node test/ai.test.js       # AI 强度（对贪心基线胜率）/ 终局 / 延迟
+node test/ai_expansions.test.js # PokéMart/Mega AI、暗牌公平性、搜索稳定性
 node test/room.test.js     # 联机房间权威（座位/脱敏/重连/持久化/超时代打）
 node test/megas.test.js    # 超级进化扩展
-node test/pokemart.test.js # Pokémart 商店扩展
+node test/pokemart.test.js # PokéMart 商店扩展
 ```
 
 ## 部署

@@ -358,6 +358,7 @@
     // target: {fromField:id} or {fromDeck:tier}
     const p = activePlayer(s);
     if (s.acted) return { ok: false, error: '本回合已行动' };
+    if (!target || typeof target !== 'object' || Array.isArray(target)) return { ok: false, error: '保留目标无效' };
     if (p.reserve.length >= HAND_MAX) return { ok: false, error: '保留区已满（最多3张）' };
     let cardId = null, tier = null, slot = -1, fromDeck = false;
     const reservable = (t) => NORMAL_TIERS.includes(t) || (s.pokemartEnabled && PM_TIERS.includes(t));
@@ -407,9 +408,11 @@
     const color = card.effectParam.discardColor, need = card.effectParam.discardCount;
     const owned = p.board.filter(id => effBonusColor(s, p, id) === color);
     if (owned.length < need) return { ok: false, error: `需要弃掉${need}张${zhBall(color)}卡，但你只有${owned.length}张` };
+    if (chosen != null && !Array.isArray(chosen)) return { ok: false, error: '弃牌选择必须是卡牌数组' };
     let discarded;
     if (chosen && chosen.length) {
       if (chosen.length !== need) return { ok: false, error: `必须弃掉${need}张` };
+      if (new Set(chosen).size !== chosen.length) return { ok: false, error: '弃牌不能重复选择同一张卡' };
       for (const id of chosen) if (owned.indexOf(id) < 0) return { ok: false, error: '所选弃牌颜色不符或不属于你' };
       discarded = chosen.slice();
     } else {
@@ -435,6 +438,7 @@
   }
   // Validate (no mutation) the chain of free takes; returns {ok, steps:[{freeId,assoc}]}.
   function planFree(s, p, parentCard, opts, depth, seen) {
+    if (!opts || typeof opts !== 'object' || Array.isArray(opts)) return { ok: false, error: '免费取卡参数无效' };
     depth = depth || 0; seen = seen || {};
     if (depth > 4) return { ok: false, error: '免费取卡层级过深' };
     const tiers = freeTiers(parentCard);
@@ -450,6 +454,7 @@
     const fc = s.byId[freeId];
     if (isPokemart(fc) && fc.effect && !PM_EFFECTS_LIVE[fc.effect]) return { ok: false, error: `免费卡「${fc.name}」效果待实现` };
     const sub = opts.freeOpts || {};
+    if (typeof sub !== 'object' || Array.isArray(sub)) return { ok: false, error: '免费取卡子参数无效' };
     let assoc = null;
     if (isPokemart(fc) && (fc.effect === 'copy' || fc.effect === 'copy_free')) {
       const r = resolveCopyTarget(s, p, sub.copyTargetId); if (!r.ok) return r; assoc = r.color;
@@ -480,6 +485,7 @@
   //   freeTakeId + freeOpts — the free card to take (TM / RARE CANDY), and its own choices
   function actionCapture(s, cardId, opts) {
     opts = opts || {};
+    if (typeof opts !== 'object' || Array.isArray(opts)) return { ok: false, error: '捕捉参数无效' };
     const p = activePlayer(s);
     if (s.acted) return { ok: false, error: '本回合已行动' };
     const card = s.byId[cardId];
@@ -504,7 +510,9 @@
     }
 
     // --- optional: discard POKÉDEX cards as 2 virtual master balls each ---
-    const spend = Array.isArray(opts.spendPokedex) ? opts.spendPokedex : []; // never iterate a non-array
+    if (opts.spendPokedex != null && !Array.isArray(opts.spendPokedex)) return { ok: false, error: '图鉴消耗必须是卡牌数组' };
+    const spend = Array.isArray(opts.spendPokedex) ? opts.spendPokedex : [];
+    if (new Set(spend).size !== spend.length) return { ok: false, error: '图鉴不能重复消耗同一张卡' };
     for (const pid of spend) {
       const pc = s.byId[pid];
       if (p.board.indexOf(pid) < 0 || !(isPokemart(pc) && pc.effect === 'colorless_master')) {
@@ -741,6 +749,78 @@
     return best;
   }
 
+  // One concrete, fully parameterised free-card chain for generic callers
+  // (server fallback / pass validation).  The strategic AI enumerates more
+  // alternatives, but every action returned here must be directly executable.
+  function defaultFreePlans(s, p, parent, depth, seen) {
+    depth = depth || 0; seen = seen || {};
+    if (depth > 4) return [];
+    const out = [];
+    for (const tier of freeTiers(parent)) for (const id of (s.field[tier] || [])) {
+      if (!id || seen[id]) continue;
+      const card = s.byId[id];
+      if (!freeTakeable(s, p, card)) continue;
+      const sub = {};
+      if (isPokemart(card) && (card.effect === 'copy' || card.effect === 'copy_free')) {
+        const target = p.board.find(bid => effBonusColor(s, p, bid));
+        if (!target) continue;
+        sub.copyTargetId = target;
+      }
+      let nested = [{}];
+      if (isPokemart(card) && (card.effect === 'free' || card.effect === 'copy_free')) {
+        const ns = Object.assign({}, seen); ns[id] = true;
+        nested = defaultFreePlans(s, p, card, depth + 1, ns);
+        if (!nested.length) continue;
+      }
+      for (const next of nested) {
+        const freeOpts = Object.assign({}, sub, next);
+        out.push({ freeTakeId: id, freeOpts });
+        if (out.length >= 32) return out;
+      }
+    }
+    if (!out.length) {
+      const none = planFree(s, p, parent, {}, depth, seen);
+      if (none.ok) out.push({});
+    }
+    return out;
+  }
+
+  function defaultCaptureAction(s, p, id) {
+    const card = s.byId[id]; if (!card) return null;
+    if (isPokemart(card) && card.effect && !PM_EFFECTS_LIVE[card.effect]) return null;
+    if (isPokemart(card) && card.effect === 'discard_buy') {
+      const color = card.effectParam.discardColor, need = card.effectParam.discardCount;
+      const owned = p.board.filter(bid => effBonusColor(s, p, bid) === color);
+      return owned.length >= need ? { type: 'capture', cardId: id, opts: { discardCards: owned.slice(0, need) } } : null;
+    }
+    const opts = {};
+    if (!canAfford(s, p, card)) {
+      const dex = p.board.filter(bid => isPokemart(s.byId[bid]) && s.byId[bid].effect === 'colorless_master');
+      let spend = null;
+      for (let n = 1; n <= dex.length; n++) if (computePayment(s, p, card, n * 2).ok) { spend = dex.slice(0, n); break; }
+      if (!spend) return null;
+      opts.spendPokedex = spend;
+    }
+    if (isPokemart(card) && (card.effect === 'copy' || card.effect === 'copy_free')) {
+      const target = p.board.find(bid => effBonusColor(s, p, bid));
+      if (!target) return null;
+      opts.copyTargetId = target;
+    }
+    if (isPokemart(card) && (card.effect === 'free' || card.effect === 'copy_free')) {
+      const plans = defaultFreePlans(s, p, card, 0, {});
+      let found = null;
+      for (const plan of plans) {
+        const merged = Object.assign({}, opts, plan);
+        if (planFree(s, p, card, merged, 0, {}).ok) { found = merged; break; }
+      }
+      if (!found) return null;
+      return { type: 'capture', cardId: id, opts: found };
+    }
+    const action = { type: 'capture', cardId: id };
+    if (Object.keys(opts).length) action.opts = opts;
+    return action;
+  }
+
   // ------------------- legal move enumeration (for AI) ---------------
   // Auto-plan the choice parameters of an effect capture so search/AI can play
   // Pokémart cards without a UI: copy targets pick the player's DEEPEST bonus
@@ -819,36 +899,21 @@
     if (avail.length === 1) acts.push({ type: 'take', colors: [avail[0]] });
     // 2 same
     for (const c of COLORS) if (s.supply[c] >= 4) acts.push({ type: 'take', colors: [c, c] });
-    // captures (field + own reserve). Pokémart cards with not-yet-live effects
-    // are excluded so the AI never picks a capture the engine will reject.
+    // captures (field + own reserve), including one executable default choice
+    // for every PokéMart effect. Strategic callers may expand more alternatives.
     const capIds = [];
     for (const tier of fieldTiers(s)) for (const id of s.field[tier]) if (id) capIds.push(id);
     for (const id of p.reserve) capIds.push(id);
     for (const id of capIds) {
-      const card = s.byId[id];
+      const card = s.byId[id], action = defaultCaptureAction(s, p, id);
+      if (!action) continue;
+      // Preserve the guaranteed-executable fallback (including POKÉDEX
+      // payment), while upgrading PokéMart choices to the engine's strategic
+      // copy/discard/free defaults used by search and timeout takeover.
       if (isPokemart(card) && card.effect) {
-        if (!PM_EFFECTS_LIVE[card.effect]) continue;
-        if (card.effect === 'discard_buy') {
-          const col = card.effectParam.discardColor, need = card.effectParam.discardCount;
-          const owned = p.board.filter(bid => effBonusColor(s, p, bid) === col).length;
-          if (owned >= need) acts.push({ type: 'capture', cardId: id, opts: autoCaptureOpts(s, p, card) });
-          continue;
-        }
-        if (card.effect === 'copy' || card.effect === 'copy_free') { // need an owned bonus card to copy
-          if (p.board.some(bid => effBonusColor(s, p, bid)) && canAfford(s, p, card))
-            acts.push({ type: 'capture', cardId: id, opts: autoCaptureOpts(s, p, card) });
-          continue;
-        }
-        if (card.effect === 'free' && canAfford(s, p, card)) {   // TM: free take auto-planned
-          acts.push({ type: 'capture', cardId: id, opts: autoCaptureOpts(s, p, card) });
-          continue;
-        }
-        // double / colorless_master capture like a normal card
-        if ((card.effect === 'double' || card.effect === 'colorless_master') && canAfford(s, p, card))
-          acts.push({ type: 'capture', cardId: id });
-        continue;
+        action.opts = Object.assign({}, action.opts || {}, autoCaptureOpts(s, p, card));
       }
-      if (canAfford(s, p, card)) acts.push({ type: 'capture', cardId: id });
+      acts.push(action);
     }
     // reserves (base levels + Pokémart levels)
     if (p.reserve.length < HAND_MAX) {
@@ -868,6 +933,8 @@
   // active player); local/AI callers omit it. End-of-turn steps (evolve / mega
   // / discard / endTurn) are included so a turn's whole lifecycle is serialisable.
   function applyAction(s, a, playerId) {
+    if (!a || typeof a !== 'object' || Array.isArray(a) || typeof a.type !== 'string')
+      return { ok: false, error: '无效的行动格式' };
     if (playerId != null && playerId !== s.turn) return { ok: false, error: '未轮到你' };
     switch (a.type) {
       case 'take':       return actionTake(s, a.colors);
@@ -891,6 +958,7 @@
   function redactFor(s, viewerId) {
     const { cardDB, byId: _b, megaDB, pokemartDB, ...dyn } = s;
     const v = JSON.parse(JSON.stringify(dyn));            // deep copy of dynamic state
+    delete v.seed;                                        // server shuffle seed is private
     if (v.decks) for (const t in v.decks) v.decks[t] = v.decks[t].map(() => null); // hide deck order, keep length
     v.players = v.players.map((p, i) => {
       if (i === viewerId) return p;                       // you see your OWN reserve ids
@@ -934,7 +1002,7 @@
     computePayment, canAfford, paymentBreakdown,
     actionTake, actionReserve, actionCapture, actionEvolve, actionDiscard, actionPass,
     actionTakeMega, megaEvolveOptions, actionMegaEvolve, MEGA_TOKENS, MEGA_WIN_SCORE,
-    PM_TIERS, PM_SLOTS, fieldTiers, isPokemart, effBonusColor, freeTiers, freeTakeable, autoCaptureOpts,
+    PM_TIERS, PM_SLOTS, fieldTiers, isPokemart, effBonusColor, freeTiers, freeTakeable, autoCaptureOpts, CANON_SPECIAL,
     evolutionOptions, needsDiscard, turnState, endTurn, determineWinner,
     legalActions, applyAction, redactFor, clone,
     zhBall, zhTier, payDesc,

@@ -198,6 +198,25 @@ test('discard_buy (REPEL): rejected without enough cards of the colour', () => {
   assert.ok(!r.ok && /需要弃掉/.test(r.error), 'needs enough cards: ' + r.error);
 });
 
+test('Pokémart payment choices reject duplicate card ids', () => {
+  const g = newGame(), p = E.activePlayer(g);
+  const dex = PM.find(c => c.effect === 'colorless_master').id;
+  p.board.push(dex);
+  const costly = DB.filter(c => c.tier === 'stage3').sort((a, b) =>
+    E.COLORS.reduce((n, x) => n + (b.cost[x] || 0), 0) - E.COLORS.reduce((n, x) => n + (a.cost[x] || 0), 0))[0];
+  g.field.stage3[0] = costly.id;
+  assert.ok(!E.actionCapture(g, costly.id, { spendPokedex: [dex, dex] }).ok, 'one Pokedex cannot be counted twice');
+
+  const h = newGame(), q = E.activePlayer(h);
+  const repel = PM.find(c => c.effect === 'discard_buy'), color = repel.effectParam.discardColor;
+  const owned = DB.filter(c => c.bonus === color).slice(0, 2); q.board.push(owned[0].id, owned[1].id);
+  h.field[repel.tier][0] = repel.id;
+  assert.ok(!E.actionCapture(h, repel.id, { discardCards: [owned[0].id, owned[0].id] }).ok, 'one card cannot be discarded twice');
+  assert.doesNotThrow(() => E.actionCapture(h, repel.id, { discardCards: { length: 2 } }));
+  assert.ok(!E.actionCapture(h, repel.id, { discardCards: { length: 2 } }).ok, 'non-array discard input rejected');
+  assert.ok(!E.actionCapture(g, costly.id, { spendPokedex: dex }).ok, 'non-array Pokedex input rejected');
+});
+
 // =================== Phase 4a: take-a-free-card effects ===================
 test('free (EVOLVE STONE): take a free Level-2 card on capture, paying nothing for it', () => {
   const g = newGame();

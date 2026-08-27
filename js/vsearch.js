@@ -61,7 +61,7 @@
 
   function actionKey(a) {
     if (a.type === 'take') return 't' + a.colors.slice().sort().join('');
-    if (a.type === 'capture') return 'c' + a.cardId;
+    if (a.type === 'capture') return 'c' + a.cardId + JSON.stringify(a.opts || {});
     if (a.type === 'reserve') return 'r' + (a.target.fromField || ('d' + a.target.fromDeck));
     if (a.type === 'takeMega') return 'm';   // must not collide with pass ('p')
     return 'p';
@@ -69,10 +69,11 @@
 
   // fresh determinization: re-shuffle every unseen deck so the tree averages
   // over plausible futures instead of peeking at the real order
-  function determinize(s) {
-    for (const t of FIELD_TIERS) {
+  function determinize(s, rng) {
+    rng = rng || Math.random;
+    for (const t of (E.fieldTiers ? E.fieldTiers(s) : FIELD_TIERS)) {
       const d = s.decks[t];
-      for (let i = d.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const tmp = d[i]; d[i] = d[j]; d[j] = tmp; }
+      for (let i = d.length - 1; i > 0; i--) { const j = (rng() * (i + 1)) | 0; const tmp = d[i]; d[i] = d[j]; d[j] = tmp; }
     }
   }
 
@@ -98,7 +99,7 @@
   function endgameVec(s) {
     const c = E.clone(s); let guard = 0;
     while (c.phase !== 'gameover' && guard++ < 16) {
-      const acts = E.legalActions(c);
+      const acts = AI && AI.legalActions ? AI.legalActions(c) : E.legalActions(c);
       if (!acts.length) { autoStep(c, null); continue; }
       const meNow = c.turn; let best = acts[0], bs = -1e18;
       for (let i = 0; i < acts.length; i++) {
@@ -169,8 +170,11 @@
 
   // one iteration: fresh determinization → replay/descend → cheap leaf (or
   // expand on revisit) → back up the per-seat value vector along the path
-  function simulate(root, G, cfg) {
-    const working = E.clone(G); determinize(working);
+  function simulate(root, G, cfg, sampleSeed) {
+    const working = AI && AI.beliefState
+      ? AI.beliefState(G, G.turn, sampleSeed)
+      : E.clone(G);
+    if (!(AI && AI.beliefState)) determinize(working, E.makeRng(sampleSeed));
     const cpuct = cfg.cpuct != null ? cfg.cpuct : DEFAULT_CPUCT;
     const path = []; let n = root, vVec = null;
     while (true) {
@@ -215,15 +219,26 @@
     cfg = cfg || {};
     const sims = cfg.sims || 200;
     const deadline = cfg.timeMs ? (Date.now() + cfg.timeMs) : 0;
+    const baseSeed = cfg.searchSeed != null ? (cfg.searchSeed >>> 0) : (
+      AI && AI.publicHash ? AI.publicHash(G, G.turn, 0x9e3779b9) : (
+        Math.imul(((G.round || 0) + 1) >>> 0, 0x85ebca6b) ^
+        Math.imul(((G.turn || 0) + 1) >>> 0, 0xc2b2ae35)
+      )
+    ) >>> 0;
     const root = mkNode(G.turn);
     root.seen = EXPAND_AT;                                          // root always expands immediately
-    expandNode(root, G, G.turn, 0);                                 // never prune OUR own actions
+    const rootState = AI && AI.beliefState ? AI.beliefState(G, G.turn, baseSeed) : E.clone(G);
+    if (!(AI && AI.beliefState)) determinize(rootState, E.makeRng(baseSeed));
+    expandNode(root, rootState, G.turn, 0);                          // never prune OUR own actions
     if (!root.acts || !root.acts.length) return null;
     if (root.acts.length === 1) return root.acts[0];
     let done = 0;
     const t0 = Date.now();
     while (true) {
-      for (let b = 0; b < 16; b++) { simulate(root, G, cfg); done++; }
+      for (let b = 0; b < 16; b++) {
+        const sampleSeed = (baseSeed + Math.imul(done + 1, 0x6d2b79f5)) >>> 0;
+        simulate(root, G, cfg, sampleSeed); done++;
+      }
       // budget check
       let remaining;
       if (deadline) {

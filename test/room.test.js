@@ -3,6 +3,7 @@ const assert = require('assert');
 const { Room } = require('../js/room.js');
 const E = require('../js/engine.js');
 const DB = require('../data/cards.json');
+const MEGA = require('../data/megas.json');
 
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -11,9 +12,9 @@ function test(name, fn) {
 }
 
 // a Room wired to an in-memory mailbox per connection
-function makeRoom() {
+function makeRoom(extra) {
   const inbox = {};
-  const room = new Room({ cardDB: DB, maxSeats: 4, send: (cid, msg) => { (inbox[cid] = inbox[cid] || []).push(msg); } });
+  const room = new Room(Object.assign({ cardDB: DB, maxSeats: 4, send: (cid, msg) => { (inbox[cid] = inbox[cid] || []).push(msg); } }, extra || {}));
   const last = (cid, t) => { const a = (inbox[cid] || []).filter(m => m.t === t); return a[a.length - 1]; };
   const clear = () => { for (const k in inbox) inbox[k] = []; };
   return { room, inbox, last, clear };
@@ -235,6 +236,49 @@ test('takeover with an empty/garbage plan still advances the turn (never stalls)
   room.now = 200000;
   room.onMessage('cA', { t: 'takeover', plan: {} });            // empty → forced legal fallback
   assert.strictEqual(last('cA', 'state').state.turn, 1, 'turn advanced despite empty plan');
+});
+
+test('malformed network action is rejected without crashing the room', () => {
+  const { room, last } = makeRoom();
+  room.onMessage('cA', { t: 'join', token: 'tA' });
+  room.onMessage('cB', { t: 'join', token: 'tB' });
+  room.onMessage('cA', { t: 'start', opts: {} });
+  assert.doesNotThrow(() => room.onMessage('cA', { t: 'action', seq: 1, action: null }));
+  assert.ok(last('cA', 'reject'), 'bad payload gets a controlled rejection');
+  assert.doesNotThrow(() => room.onMessage('cA', { t: 'action', seq: 2, action: { type: 'reserve' } }));
+  assert.ok(last('cA', 'reject'), 'missing reserve target gets a controlled rejection');
+});
+
+test('takeover cannot discard tokens unless the timed-out player is over the limit', () => {
+  const { room } = makeRoom();
+  room.now = 0;
+  room.onMessage('cA', { t: 'join', token: 'tA' });
+  room.onMessage('cB', { t: 'join', token: 'tB' });
+  room.onMessage('cA', { t: 'start', opts: {} });
+  room.G.players[0].tokens.red = 3;
+  room.now = 200000;
+  room.onMessage('cA', { t: 'takeover', plan: {
+    action: TAKE, discards: Array(20).fill('red'), evolution: null,
+  } });
+  assert.strictEqual(room.G.players[0].tokens.red, 4, 'malicious extra discards ignored');
+});
+
+test('takeover applies a planned Mega evolution before ending the turn', () => {
+  const { room, last } = makeRoom({ megaDB: MEGA });
+  room.now = 0;
+  room.onMessage('cA', { t: 'join', token: 'tA' });
+  room.onMessage('cB', { t: 'join', token: 'tB' });
+  room.onMessage('cA', { t: 'start', opts: { megas: true } });
+  const mega = MEGA[0], base = DB.find(c => c.name === mega.megaFrom), p = room.G.players[0];
+  p.board.push(base.id);
+  for (const c of E.ALL_TOKENS) p.tokens[c] = mega.cost[c] || 0;
+  room.now = 200000;
+  room.onMessage('cA', { t: 'takeover', plan: {
+    action: { type: 'takeMega' }, discards: [],
+    megaEvolution: { megaId: mega.id, fromId: base.id }, evolution: null,
+  } });
+  assert.ok(p.board.includes(mega.id) && !p.board.includes(base.id), 'Mega evolution executed by authority');
+  assert.strictEqual(last('cA', 'state').state.turn, 1, 'turn advanced after Mega evolution');
 });
 
 test('state broadcast carries turnStartedAt / serverNow / turnTimeoutMs for the idle clock', () => {

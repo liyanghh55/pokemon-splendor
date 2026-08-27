@@ -196,7 +196,11 @@
         if (!acted) { try { E.actionPass(this.G); } catch (e) { } }
       }
       // discards (AI plan, then a forced fallback if still over the cap)
-      if (Array.isArray(plan.discards)) for (const col of plan.discards) { try { E.actionDiscard(this.G, col); } catch (e) { } }
+      if (Array.isArray(plan.discards)) for (const col of plan.discards) {
+        if (!E.needsDiscard(this.G, this.G.players[seat])) break;
+        if (E.ALL_TOKENS.indexOf(col) < 0) continue;
+        try { E.actionDiscard(this.G, col); } catch (e) { }
+      }
       let guard = 0;
       while (E.needsDiscard(this.G, this.G.players[seat]) && guard++ < 20) {
         const tok = E.ALL_TOKENS.find(c => this.G.players[seat].tokens[c] > 0);

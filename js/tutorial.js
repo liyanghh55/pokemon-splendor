@@ -12,7 +12,7 @@
   const COLORS = E.COLORS;
   const P = (g) => g.players[0];
 
-  let active = false, curMode = 'base', steps = [], idx = 0, ctx = null;
+  let active = false, curMode = 'base', steps = [], idx = 0, ctx = null, describedTarget = null;
 
   // ---------------------------------------------------------------- scenario builders
   function purge(g, id) {                       // remove an id from every deck and field slot
@@ -22,7 +22,9 @@
     }
   }
   function placeField(g, tier, slot, id) { purge(g, id); g.field[tier][slot] = id; }
+  function placeOnly(g, tier, id) { g.field[tier].fill(null); placeField(g, tier, 0, id); }
   function give(g, id) { purge(g, id); P(g).board.push(id); }
+  function setBoard(g, ids) { P(g).board = []; P(g).buried = []; P(g).assoc = {}; ids.forEach(id => give(g, id)); }
   function setTokens(g, obj) {
     const p = P(g);
     p.tokens = { red: 0, blue: 0, black: 0, pink: 0, yellow: 0, purple: 0 };
@@ -47,6 +49,12 @@
     const g = E.createGame(PS.DB, { numPlayers: 1, names: ['你'], ai: [false], megas: true, megaDB: PS.MEGA_DB, winScore: 999 });
     give(g, 's3_01');                          // 耿鬼 → 超级耿鬼 (mg_01)
     setTokens(g, { red: 3 });                  // afford 超级耿鬼 (cost 3red)
+    return g;
+  }
+  function buildPokemart() {
+    const g = E.createGame(PS.DB, { numPlayers: 1, names: ['你'], ai: [false], pokemart: true, pokemartDB: PS.POKEMART_DB, winScore: 999 });
+    give(g, 's1_14');                          // one real pink bonus for copy lessons
+    setTokens(g, {});
     return g;
   }
 
@@ -76,7 +84,7 @@
       html: '<b>捕捉</b> = 花精灵球把宝可梦收入囊中，<b>立刻得分</b>。<br>看 <b>喇叭芽</b>：它要 2红+2粉，但你的 <b>2 个粉色折扣</b>把粉色全抵掉了，所以只要 <b>2 红</b>就能捕捉——你手上正好有 2 红！<br>👇 点高亮的 <b>喇叭芽</b>，再点「捕捉」。',
       arrange: (g) => { setTokens(g, { red: 2 }); placeField(g, 'stage1', 1, 's1_04'); E.refill(g, 'stage1'); },
       target: () => document.querySelector('.card[data-card="s1_04"]'),
-      detect: (g, c) => P(g).board.length > c.board,
+      detect: (g) => P(g).board.includes('s1_04'),
     },
     {
       title: '④ 进化',
@@ -130,11 +138,67 @@
     },
   ];
 
+  const pokemartSteps = [
+    {
+      title: '欢迎光临 PokéMart 🛒',
+      html: 'PokéMart 是一套可选的<b>商店扩展</b>：每个等级额外翻开 2 张道具卡，购买也算你这回合的主行动。<br><br>商店分为 <b>Lv.1 基础道具</b>、<b>Lv.2 进阶道具</b>、<b>Lv.3 高级道具</b>。道具与宝可梦一样可以得分、提供折扣，但还会触发特殊效果。',
+      target: '.pokemart-head', next: true,
+    },
+    {
+      title: '① 药水：一张抵两张',
+      html: '<b>药水</b>会提供 <b>2 个同色永久折扣</b>，是快速发展经济的核心道具。<br>我已准备好刚好足够的球。👇 点高亮的<b>药水</b>，然后点「购买道具」。',
+      arrange: (g) => { placeOnly(g, 'pmL2', 'pm_12'); setTokens(g, { blue: 4, pink: 3 }); },
+      target: () => document.querySelector('.card[data-card="pm_12"]'),
+      detect: (g) => P(g).board.includes('pm_12'),
+    },
+    {
+      title: '② 技能机：复制一种折扣',
+      html: '<b>技能机</b>没有固定颜色。获得时选择你已拥有的一张彩色卡，它就永久复制那种折扣。<br>👇 点<b>技能机</b>后选「购买道具」，再在弹窗中选一张关联卡。',
+      arrange: (g) => { placeOnly(g, 'pmL1', 'pm_23'); setTokens(g, { red: 3, blue: 2 }); },
+      target: () => document.querySelector('.card[data-card="pm_23"]'),
+      detect: (g) => P(g).board.includes('pm_23') && !!P(g).assoc.pm_23,
+    },
+    {
+      title: '③ 图鉴：需要时再抵款',
+      html: '<b>图鉴</b>平时不给颜色折扣，但购买其他卡时可丢弃，当作 <b>2 个万能球</b>。<br>你已拥有一张图鉴，现在少 2 个红球。👇 捕捉高亮的<b>蚊香蝌蚪</b>，并确认弃用图鉴抵款。',
+      arrange: (g) => { setBoard(g, ['s1_14', 'pm_06']); placeOnly(g, 'stage1', 's1_21'); setTokens(g, { red: 1 }); },
+      target: () => document.querySelector('.card[data-card="s1_21"]'),
+      detect: (g) => P(g).board.includes('s1_21') && !P(g).board.includes('pm_06'),
+    },
+    {
+      title: '④ 神奇糖果：一次做两件事',
+      html: '<b>神奇糖果</b>同时有两个效果：① 复制你已有的一种折扣；② 立即免费拿一张场上的 <b>Lv.1 道具或一级宝可梦</b>。<br>👇 购买神奇糖果，按顺序完成两次选择。',
+      arrange: (g) => { setBoard(g, ['s1_14']); placeOnly(g, 'pmL2', 'pm_18'); g.field.pmL1.fill(null); placeOnly(g, 'stage1', 's1_07'); setTokens(g, { red: 1, blue: 4, black: 3 }); },
+      target: () => document.querySelector('.card[data-card="pm_18"]'),
+      detect: (g) => P(g).board.includes('pm_18'),
+    },
+    {
+      title: '⑤ 进化石：免费拿二级卡',
+      html: '<b>进化石</b>会让你立即免费拿一张场上的 <b>Lv.2 道具或二级宝可梦</b>。免费卡的效果也会继续触发。<br>👇 购买<b>进化石</b>，再选一张免费卡。',
+      arrange: (g) => { placeOnly(g, 'pmL3', 'pm_02'); placeOnly(g, 'pmL2', 'pm_11'); g.field.stage2.fill(null); setTokens(g, { blue: 1, black: 6, pink: 3 }); },
+      target: () => document.querySelector('.card[data-card="pm_02"]'),
+      detect: (g) => P(g).board.includes('pm_02'),
+    },
+    {
+      title: '⑥ 驱虫喷雾：弃卡换高分',
+      html: '<b>驱虫喷雾</b>不花精灵球，而是弃掉指定颜色的 <b>2 张已拥有卡</b>，换取 3 分。会牺牲长期折扣，适合冲分收尾。<br>我已给你两张粉色卡。👇 购买高亮的<b>驱虫喷雾</b>，在弹窗中选两张作为代价。',
+      arrange: (g) => { setBoard(g, ['s1_14', 's1_20']); placeOnly(g, 'pmL3', 'pm_28'); setTokens(g, {}); },
+      target: () => document.querySelector('.card[data-card="pm_28"]'),
+      detect: (g) => P(g).board.includes('pm_28'),
+    },
+    {
+      title: '商店策略课 🎯',
+      html: '你已学会全部 6 种道具！<br><br><b>前期</b>：药水、技能机建立折扣。<br><b>中期</b>：神奇糖果、进化石连锁拿卡。<br><b>关键回合</b>：图鉴补费用缺口。<br><b>收尾</b>：驱虫喷雾牺牲折扣换 3 分。<br><br>正式开局时，在设置页勾选 <b>PokéMart</b> 即可启用。',
+      next: true,
+    },
+  ];
+
   // ---------------------------------------------------------------- coach overlay
   function ensureDOM() {
     if (document.getElementById('tut-bubble')) return;
     const mask = document.createElement('div'); mask.id = 'tut-mask'; mask.className = 'hidden';
     const bubble = document.createElement('div'); bubble.id = 'tut-bubble'; bubble.className = 'hidden';
+    bubble.setAttribute('role', 'region'); bubble.setAttribute('aria-live', 'polite'); bubble.setAttribute('aria-labelledby', 'tut-title'); bubble.setAttribute('aria-describedby', 'tut-text');
     bubble.innerHTML = '<div id="tut-step"></div><div id="tut-title"></div><div id="tut-text"></div><div id="tut-actions"></div>';
     document.body.appendChild(mask); document.body.appendChild(bubble);
   }
@@ -143,15 +207,32 @@
   function positionSpot() {
     const s = steps[idx], mask = document.getElementById('tut-mask'); if (!mask) return;
     const t = s ? resolve(s.target) : null;
-    if (!t) { mask.classList.add('hidden'); return; }
+    if (!t) { mask.classList.add('hidden'); positionBubble(null); return; }
     const r = t.getBoundingClientRect();
-    if (r.width === 0 && r.height === 0) { mask.classList.add('hidden'); return; }
+    if (r.width === 0 && r.height === 0) { mask.classList.add('hidden'); positionBubble(null); return; }
     const pad = 8;
     mask.style.left = (r.left - pad) + 'px';
     mask.style.top = (r.top - pad) + 'px';
     mask.style.width = (r.width + pad * 2) + 'px';
     mask.style.height = (r.height + pad * 2) + 'px';
     mask.classList.remove('hidden');
+    positionBubble(r);
+  }
+
+  function positionBubble(targetRect) {
+    const bubble = document.getElementById('tut-bubble');
+    if (!bubble || bubble.classList.contains('hidden')) return;
+    const vv = window.visualViewport;
+    const viewTop = vv ? vv.offsetTop : 0, viewH = vv ? vv.height : window.innerHeight;
+    const safe = 10, bh = Math.min(bubble.offsetHeight, viewH - safe * 2);
+    let top = viewTop + 58;
+    if (targetRect) {
+      const below = viewTop + viewH - targetRect.bottom;
+      if (below >= bh + 18) top = targetRect.bottom + 14;
+      else if (targetRect.top - viewTop >= bh + 18) top = targetRect.top - bh - 14;
+    }
+    top = Math.max(viewTop + safe, Math.min(top, viewTop + viewH - bh - safe));
+    bubble.style.top = Math.round(top) + 'px';
   }
 
   function snapshot(g) {
@@ -170,20 +251,31 @@
     document.getElementById('tut-title').innerHTML = s.title || '';
     document.getElementById('tut-text').innerHTML = s.html || '';
     const acts = document.getElementById('tut-actions'); acts.innerHTML = '';
+    if (describedTarget) { describedTarget.removeAttribute('aria-describedby'); describedTarget = null; }
     if (s.next) {
       const nx = document.createElement('button'); nx.className = 'primary'; nx.textContent = '下一步 ▶'; nx.onclick = next; acts.appendChild(nx);
+      setTimeout(() => nx.focus(), 0);
     } else {
       const hint = document.createElement('span'); hint.className = 'tut-hint'; hint.textContent = '按上面的提示操作…'; acts.appendChild(hint);
-      const sk = document.createElement('button'); sk.className = 'ghost small'; sk.textContent = '跳过此步'; sk.onclick = next; acts.appendChild(sk);
+      const retry = document.createElement('button'); retry.className = 'ghost small'; retry.textContent = '重来本步'; retry.onclick = retryStep; acts.appendChild(retry);
     }
     const ex = document.createElement('button'); ex.className = 'ghost small'; ex.textContent = '退出教程'; ex.onclick = exit; acts.appendChild(ex);
     document.getElementById('tut-bubble').classList.remove('hidden');
     const t = resolve(s.target);
-    if (t && t.scrollIntoView) { try { t.scrollIntoView({ block: 'center', inline: 'center' }); } catch (e) { } }
+    if (t && t.scrollIntoView) {
+      t.setAttribute('aria-describedby', 'tut-text'); describedTarget = t;
+      try { t.scrollIntoView({ block: 'center', inline: 'center' }); } catch (e) { }
+      if (!s.next && t.focus) setTimeout(() => t.focus({ preventScroll: true }), 80);
+    }
     positionSpot();
   }
 
   function next() { idx++; if (idx >= steps.length) finish(); else showStep(); }
+  function retryStep() {
+    const u = PS.UI;
+    if (u) { u.pick = []; u.selCard = null; u.selDeck = null; u.busy = false; }
+    showStep();
+  }
 
   function finish() {
     active = false; removeListeners();
@@ -191,15 +283,21 @@
     const m = document.getElementById('tut-mask'); if (m) m.classList.add('hidden');
     const wm = document.getElementById('win-modal'); if (wm) wm.classList.add('hidden');
     const b = document.getElementById('tut-bubble'); if (!b) return;
+    try { localStorage.setItem('ps-tutorial-complete-' + curMode, '1'); } catch (e) { }
     document.getElementById('tut-step').textContent = '教程完成';
-    document.getElementById('tut-title').innerHTML = curMode === 'megas' ? '⚡ 学会超级进化！' : '🏆 恭喜通关！';
+    document.getElementById('tut-title').innerHTML = curMode === 'megas' ? '⚡ 学会超级进化！' : curMode === 'pokemart' ? '🛒 PokéMart 毕业！' : '🏆 恭喜通关！';
     document.getElementById('tut-text').innerHTML = curMode === 'megas'
       ? '耿鬼超级进化成了 <b>超级耿鬼</b>！<br>正式的超级进化对局：达到 <b>20 分 + 集齐 5 种颜色折扣 + 至少 1 只 Mega</b> 即获胜。去挑战吧！'
+      : curMode === 'pokemart'
+      ? '你已亲手操作了<b>药水、技能机、图鉴、神奇糖果、进化石和驱虫喷雾</b>。<br>现在可以开一局 PokéMart 扩展对局了！'
       : '你已经体验了 <b>拿球、捕捉、保留、进化</b>，并赢得了比赛！这就是游戏的核心循环。<br>现在去开始一局真正的对局，挑战电脑或朋友吧（正式对局先到 <b>18 分</b> 者胜）。';
     const acts = document.getElementById('tut-actions'); acts.innerHTML = '';
-    const go = document.createElement('button'); go.className = 'primary'; go.textContent = '开始一局对局'; go.onclick = exit; acts.appendChild(go);
-    if (curMode !== 'megas') { const ag = document.createElement('button'); ag.className = 'ghost small'; ag.textContent = '再练一次'; ag.onclick = () => start('base'); acts.appendChild(ag); }
+    const go = document.createElement('button'); go.className = 'primary';
+    go.textContent = curMode === 'pokemart' ? '返回设置并启用 PokéMart' : curMode === 'megas' ? '返回设置并启用 Megas' : '返回设置开始对局';
+    go.onclick = () => exit(curMode); acts.appendChild(go);
+    if (curMode !== 'megas') { const ag = document.createElement('button'); ag.className = 'ghost small'; ag.textContent = '再练一次'; ag.onclick = () => start(curMode); acts.appendChild(ag); }
     b.classList.remove('hidden');
+    setTimeout(() => go.focus(), 0);
   }
 
   function onRender(g) {
@@ -211,19 +309,29 @@
 
   // ---------------------------------------------------------------- lifecycle
   function onReflow() { positionSpot(); }
-  function addListeners() { window.addEventListener('scroll', onReflow, true); window.addEventListener('resize', onReflow); }
-  function removeListeners() { window.removeEventListener('scroll', onReflow, true); window.removeEventListener('resize', onReflow); }
+  function onTutorialKey(e) {
+    if (e.key !== 'Escape' || !active) return;
+    const dialog = document.querySelector('.modal:not(.hidden),#inspect:not(.hidden)');
+    if (dialog) return; // the top-most dialog owns Escape
+    exit();
+  }
+  function addListeners() { window.addEventListener('scroll', onReflow, true); window.addEventListener('resize', onReflow); document.addEventListener('keydown', onTutorialKey); }
+  function removeListeners() { window.removeEventListener('scroll', onReflow, true); window.removeEventListener('resize', onReflow); document.removeEventListener('keydown', onTutorialKey); }
 
   function start(mode) {
     stop();
     ensureDOM();
-    curMode = (mode === 'megas') ? 'megas' : 'base';
+    curMode = mode === 'megas' ? 'megas' : mode === 'pokemart' ? 'pokemart' : 'base';
     if (curMode === 'megas' && (!PS.MEGA_DB || !PS.MEGA_DB.length)) {   // mega tutorial needs the Megas data loaded
       alert('超级进化扩展未加载，暂时无法开始该教程。');
       return;
     }
-    const g = curMode === 'megas' ? buildMega() : buildBase();
-    steps = curMode === 'megas' ? megaSteps : baseSteps;
+    if (curMode === 'pokemart' && (!PS.POKEMART_DB || !PS.POKEMART_DB.length)) {
+      alert('PokéMart 扩展未加载，暂时无法开始该教程。');
+      return;
+    }
+    const g = curMode === 'megas' ? buildMega() : curMode === 'pokemart' ? buildPokemart() : buildBase();
+    steps = curMode === 'megas' ? megaSteps : curMode === 'pokemart' ? pokemartSteps : baseSteps;
     idx = 0; ctx = null; active = true;
     addListeners();
     PS.enterGame(g, { humans: 1, hasAI: false });
@@ -232,11 +340,16 @@
   function stop() {
     active = false; steps = []; idx = 0; ctx = null;
     removeListeners();
+    if (describedTarget) { describedTarget.removeAttribute('aria-describedby'); describedTarget = null; }
     document.body.classList.remove('tut-hide-endturn');
     const b = document.getElementById('tut-bubble'); if (b) b.classList.add('hidden');
     const m = document.getElementById('tut-mask'); if (m) m.classList.add('hidden');
   }
-  function exit() { stop(); PS.backToSetup(); }
+  function exit(enableMode) {
+    stop(); PS.backToSetup();
+    if (enableMode === 'pokemart') { const el = document.getElementById('opt-pokemart'); if (el) { el.checked = true; el.dispatchEvent(new Event('change')); } }
+    if (enableMode === 'megas') { const el = document.getElementById('opt-megas'); if (el) { el.checked = true; el.dispatchEvent(new Event('change')); } }
+  }
 
   window.Tutorial = { start, stop, onRender, active: () => active };
 })();

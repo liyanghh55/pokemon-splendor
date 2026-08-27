@@ -50,6 +50,14 @@ test('setup: supply / field / decks correct for 2 & 4 players', () => {
   assert.strictEqual(g4.field.stage1.filter(Boolean).length + g4.decks.stage1.length, 35);
 });
 
+test('rare/legend setup only uses the exported canonical special pools', () => {
+  const g = E.createGame(DB, { numPlayers: 4, seed: 123 });
+  for (const tier of ['rare', 'legend']) {
+    const allowed = new Set(E.CANON_SPECIAL[tier]);
+    for (const id of g.field[tier].concat(g.decks[tier])) assert.ok(allowed.has(id), `${id} belongs to canonical ${tier}`);
+  }
+});
+
 // ---- take ----
 test('take 3 distinct works; duplicates rejected', () => {
   const g = E.createGame(DB, { numPlayers: 2, seed: 2 });
@@ -212,6 +220,14 @@ test('applyAction dispatches every move type + rejects unknown', () => {
   assert.strictEqual(g.supply.blue, before + 1);
 });
 
+test('applyAction rejects malformed action payloads without throwing', () => {
+  const g = E.createGame(DB, { numPlayers: 2, seed: 77 });
+  for (const bad of [null, [], {}, { type: 3 }, { type: 'reserve' }, { type: 'reserve', target: null }, { type: 'reserve', target: [] }]) {
+    let result; assert.doesNotThrow(() => { result = E.applyAction(g, bad); });
+    assert.ok(result && !result.ok, 'malformed payload rejected');
+  }
+});
+
 test('applyAction ownership guard: only the active seat may move', () => {
   const g = E.createGame(DB, { numPlayers: 2, seed: 12 }); // turn = 0
   assert.ok(!E.applyAction(g, { type: 'take', colors: ['red', 'blue', 'black'] }, 1).ok, 'seat 1 cannot act on seat 0 turn');
@@ -226,6 +242,7 @@ test('redactFor hides deck order + opponents reserves, keeps own + public info',
   const ownId = g.players[0].reserve[0];
   assert.ok(ownId);
   const mine = E.redactFor(g, 0), theirs = E.redactFor(g, 1);
+  assert.strictEqual(mine.seed, undefined, 'server shuffle seed is never exposed');
   // 1) deck order hidden for everyone (same length, no real ids)
   for (const t of Object.keys(g.decks)) {
     assert.strictEqual(mine.decks[t].length, g.decks[t].length);
