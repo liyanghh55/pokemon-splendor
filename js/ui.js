@@ -541,7 +541,7 @@
       const rowEl = document.createElement('div');
       rowEl.className = 'tier-row' + (row.special ? ' tier-special' : '');
       rowEl.dataset.rowKey = row.tiers.join('-');
-      let inner = `<div class="tier-label">${row.tiers.map(t => TIER_NAMES[t]).join('/')}</div>`;
+      let inner = `<div class="tier-label">${row.tiers.map(t => TIER_NAMES[t]).join(row.special ? ' / ' : '/')}</div>`;
       for (const tier of row.tiers) {
         const deckN = G.decks[tier].length;
         const canReserveDeck = human && UI.phase === 'main' && E.NORMAL_TIERS.includes(tier) && deckN > 0 && me().reserve.length < E.HAND_MAX && !G.acted;
@@ -771,7 +771,7 @@
 
   function renderActionBar() {
     const bar = $('#action-bar');
-    bar.classList.remove('main-action-summary');
+    bar.classList.remove('main-action-summary', 'evolve-action-panel');
     if (G.phase === 'gameover') { bar.innerHTML = '<div class="act-hint">游戏已结束。</div>'; return; }
     const p = me();
     if (p.isAI) { bar.innerHTML = '<div class="act-hint">电脑正在行动…</div>'; return; }
@@ -787,22 +787,25 @@
     }
     if (UI.phase === 'evolve') {
       const opts = dedupeEvo(E.evolutionOptions(G, p));
-      let html = '<div class="act-hint">回合结束 · 可进化一只宝可梦（可选，每回合至多1次）：</div>';
+      bar.classList.add('evolve-action-panel');
+      let html = `<div class="evolve-panel-head"><span>进化阶段</span><strong>选择一条进化路线</strong><small>每回合至多进化 1 次</small></div><div class="evolve-list">`;
       for (const o of opts) {
         const from = byId[o.fromId], to = byId[o.toId];
-        html += `<button class="evo-option" data-evo-from="${o.fromId}" data-evo-to="${o.toId}">
-                   <b>${from.name}</b> → <b>${to.name}</b>（+${to.vp - from.vp}分，需 ${o.count} 个${BALL_NAMES[o.color]}折扣）
-                 </button>`;
+        html += `<button class="evo-option" data-evo-from="${o.fromId}" data-evo-to="${o.toId}" aria-label="${from.name}进化为${to.name}，增加${to.vp - from.vp}分">
+          <span class="evo-card-pair"><img src="${from.img}" alt=""><i>→</i><img src="${to.img}" alt=""></span>
+          <span class="evo-copy"><strong><b>${from.name}</b><i>→</i><b>${to.name}</b></strong><small><span class="evo-cost-dot ${o.color}"></span>${o.count} 个${BALL_NAMES[o.color]}永久资源</small><em>+${to.vp - from.vp} 分</em></span>
+        </button>`;
       }
       const mopts = G.megasEnabled ? E.megaEvolveOptions(G, p) : [];
       for (const o of mopts) {
         const from = byId[o.fromId], mega = byId[o.megaId];
         const costStr = E.ALL_TOKENS.filter(k => mega.cost[k] > 0).map(k => `${mega.cost[k]}${BALL_NAMES[k]}`).join('+');
-        html += `<button class="evo-option mega-evo" data-mega="${o.megaId}" data-mega-from="${o.fromId}">
-                   ⚡<b>${from.name}</b> → <b>${mega.name}</b>（+${mega.vp - from.vp}分，付 ${costStr}，耗1 Mega代币）
-                 </button>`;
+        html += `<button class="evo-option mega-evo" data-mega="${o.megaId}" data-mega-from="${o.fromId}" aria-label="${from.name}超级进化为${mega.name}，增加${mega.vp - from.vp}分">
+          <span class="evo-card-pair"><img src="${from.img}" alt=""><i>⚡</i><img src="${mega.img}" alt=""></span>
+          <span class="evo-copy"><strong><b>${from.name}</b><i>→</i><b>${mega.name}</b></strong><small>${costStr} · Mega 代币×1</small><em>+${mega.vp - from.vp} 分</em></span>
+        </button>`;
       }
-      html += `<div class="act-buttons"><button class="primary" data-act="end-turn">不进化，结束回合</button></div>`;
+      html += `</div><div class="evolve-skip"><button class="ghost" data-act="end-turn">暂不进化 · 结束回合</button></div>`;
       bar.innerHTML = html;
       return;
     }

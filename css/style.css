@@ -344,8 +344,26 @@ body.has-card-selection #action-bar{border-color:var(--gold);box-shadow:0 0 0 1p
 .tray{display:flex;gap:6px;align-items:center;margin:8px 0;min-height:38px;flex-wrap:wrap}
 .tray .ball[data-discard]{width:44px;height:44px;cursor:pointer}
 .tray .tray-pick{padding:0;border:2px solid var(--gold);min-height:0;flex:none;box-shadow:0 2px 7px rgba(0,0,0,.4)}
-.evo-option{width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:8px;min-height:48px}
-.evo-option b{color:var(--gold)}
+.evolve-action-panel{padding:10px}
+.evolve-panel-head{display:flex;flex-direction:column;gap:2px;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+.evolve-panel-head>span{color:var(--gold);font-size:10px;font-weight:900;letter-spacing:1px}
+.evolve-panel-head strong{font-size:13px;line-height:1.25}
+.evolve-panel-head small{color:var(--muted);font-size:9px}
+.evolve-list{display:flex;flex-direction:column;gap:6px;max-height:min(288px,44vh);overflow:auto;padding-right:2px;scrollbar-width:thin}
+.evo-option{position:relative;width:100%;min-height:64px;margin:0;padding:6px;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--ink);display:grid;grid-template-columns:70px minmax(0,1fr);align-items:center;gap:7px;overflow:hidden}
+.evo-card-pair{display:grid;grid-template-columns:29px 10px 29px;align-items:center;justify-content:center;gap:1px}
+.evo-card-pair img{width:29px;height:39px;object-fit:cover;border:1px solid rgba(255,255,255,.38);border-radius:4px;box-shadow:0 2px 5px rgba(0,0,0,.35)}
+.evo-card-pair i,.evo-copy strong i{font-style:normal;color:var(--gold)}
+.evo-card-pair i{font-size:11px;text-align:center}
+.evo-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+.evo-copy strong{display:flex;align-items:center;gap:3px;min-width:0;font-size:11px;line-height:1.2}
+.evo-copy strong b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gold)}
+.evo-copy small{display:flex;align-items:center;gap:3px;color:var(--muted);font-size:9px;line-height:1.25}
+.evo-copy em{color:#ffdf72;font-size:10px;font-style:normal;font-weight:900}
+.evo-cost-dot{width:9px;height:9px;border:1px solid rgba(255,255,255,.55);border-radius:50%;box-shadow:inset 0 -1px 2px rgba(0,0,0,.28);flex:none}
+.evo-cost-dot.red{background:#e54b4b}.evo-cost-dot.blue{background:#358ed2}.evo-cost-dot.black{background:#3d424c}.evo-cost-dot.pink{background:#df75a5}.evo-cost-dot.yellow{background:#e0ab35}.evo-cost-dot.purple{background:#8d59bd}
+.evolve-skip{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.evolve-skip button{width:100%;min-height:34px;padding:5px 8px;font-size:10px}
 @media (hover:hover) and (pointer:fine){ .evo-option:hover{border-color:var(--gold)} }
 /* selected-card preview inside the action bar (read the card while you act) */
 .sel-preview{float:right;width:calc(var(--card-w) * 1.5);height:auto;aspect-ratio:3/4;border-radius:9px;border:2px solid var(--gold);margin:0 0 6px 10px;box-shadow:0 4px 12px rgba(0,0,0,.5);cursor:zoom-in}
@@ -821,6 +839,10 @@ body.tutorial-choice-open #tut-mask,body.tutorial-choice-open #tut-bubble{visibi
 #game .mychip .mc-bon,#game .pl-free{color:#168a50}
 #game .evo-option{background:rgba(255,255,255,.78);border-color:#83b6d7;color:var(--ink)}
 #game .evo-option b,#game .eff-tag{color:#a87000}
+#game .evolve-panel-head{border-bottom-color:rgba(70,137,180,.35)}
+#game .evolve-panel-head>span,#game .evo-copy em{color:#a87000}
+#game .evo-copy small{color:#567b97}
+#game .evolve-skip{border-top-color:rgba(70,137,180,.35)}
 
 #game #log{background:linear-gradient(160deg,rgba(250,254,255,.96),rgba(224,245,252,.93))}
 #game #log-lines{color:#507590}
@@ -869,6 +891,7 @@ body.tutorial-choice-open #tut-mask,body.tutorial-choice-open #tut-bubble{visibi
   #game #controls{grid-area:controls;position:static;align-self:stretch;max-height:none;overflow:auto;overscroll-behavior:contain;gap:10px;padding-right:1px}
   #game #action-bar{position:sticky;top:0;z-index:8;box-shadow:0 3px 0 rgba(43,111,158,.28),inset 0 0 0 1px rgba(255,255,255,.7)}
   #game #action-bar.main-action-summary{flex:0 0 108px;height:108px;min-height:108px;overflow:hidden}
+  #game #action-bar.evolve-action-panel{flex:0 0 auto;height:auto;min-height:0;overflow:hidden}
   #game #log{grid-area:log;align-self:stretch;min-height:0;max-height:none;margin:0;overflow:hidden}
   #game #log-lines{flex:1;min-height:0;padding-right:2px}
   #game #players{grid-area:players;padding:0;align-self:end;grid-auto-columns:minmax(0,1fr);gap:10px}
@@ -948,41 +971,51 @@ body.tutorial-choice-open #tut-mask,body.tutorial-choice-open #tut-bubble{visibi
     grid-row:1 / span 3;
     display:grid;
     --special-card-w:clamp(82px,6.2vw,108px);
-    grid-template-columns:21px 38px minmax(0,1fr);
-    grid-template-rows:repeat(2,minmax(0,1fr));
+    grid-template-columns:38px minmax(0,1fr);
+    grid-template-rows:32px repeat(2,minmax(0,1fr));
     gap:7px;
     min-height:0;
+    overflow:visible;
   }
   #game #field:has(> .tier-mega) > .tier-special:not(.tier-mega){grid-row:2 / span 3}
   #game #field > .tier-special:not(.tier-mega) > .tier-label{
-    grid-column:1;
-    grid-row:1 / span 2;
+    grid-column:1 / -1;
+    grid-row:1;
     width:auto;
-    padding:0;
+    padding:0 4px 6px;
     align-self:stretch;
-    display:grid;
-    place-items:center;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    writing-mode:horizontal-tb;
+    text-orientation:mixed;
+    letter-spacing:1px;
+    border-bottom:1px solid rgba(117,173,210,.55);
   }
   #game #field > .tier-special:not(.tier-mega) > .special-deck-count{height:66px;align-self:center}
-  #game #field > .tier-special:not(.tier-mega) > .special-deck-count[data-tier="legend"]{grid-column:2;grid-row:1}
-  #game #field > .tier-special:not(.tier-mega) > .card-strip:nth-of-type(3){grid-column:3;grid-row:1}
-  #game #field > .tier-special:not(.tier-mega) > .special-deck-count[data-tier="rare"]{grid-column:2;grid-row:2}
-  #game #field > .tier-special:not(.tier-mega) > .card-strip:nth-of-type(5){grid-column:3;grid-row:2}
+  #game #field > .tier-special:not(.tier-mega) > .special-deck-count[data-tier="legend"]{grid-column:1;grid-row:2}
+  #game #field > .tier-special:not(.tier-mega) > .card-strip:nth-of-type(3){grid-column:2;grid-row:2}
+  #game #field > .tier-special:not(.tier-mega) > .special-deck-count[data-tier="rare"]{grid-column:1;grid-row:3}
+  #game #field > .tier-special:not(.tier-mega) > .card-strip:nth-of-type(5){grid-column:2;grid-row:3}
   #game #field > .tier-special:not(.tier-mega) > .card-strip{
     display:grid;
     grid-template-columns:minmax(0,1fr);
     align-items:stretch;
     min-width:0;
-    overflow:hidden;
+    overflow:visible;
   }
   #game #field > .tier-special:not(.tier-mega) > .card-strip > .market-card{
-    width:calc(var(--special-card-w) + 24px);
+    width:calc(var(--special-card-w) + 27px);
     height:calc(var(--special-card-w) * 4 / 3);
-    grid-template-columns:var(--special-card-w) 21px;
+    grid-template-columns:var(--special-card-w) 24px;
     flex-basis:auto;
-    justify-self:start;
+    justify-self:center;
     align-self:center;
+    position:relative;
+    z-index:1;
+    overflow:visible;
   }
+  #game #field > .tier-special:not(.tier-mega) > .card-strip > .market-card > .market-card-actions{position:relative;z-index:3}
   #game #field > .tier-special:not(.tier-mega) > .card-strip > .market-card > .card,
   #game #field > .tier-special:not(.tier-mega) > .card-strip > .card{
     width:var(--special-card-w);
