@@ -455,12 +455,18 @@
     if (window.Tutorial && Tutorial.onRender) { try { Tutorial.onRender(G, UI); } catch (e) { } } // drive the tutorial coach
   }
 
-  // active player's held tokens + permanent bonus discounts, pinned in the dock so you
-  // never have to scroll to your own panel to plan a purchase.
+  // Keep the local trainer's held tokens + permanent bonuses visible throughout the
+  // match.  In a one-human game this remains the human seat even while the AI acts;
+  // hot-seat games continue to follow the trainer whose turn is active.
   function renderMyResources() {
     const host = $('#my-resources'); if (!host) return;
-    const p = me();
-    if (!p || p.isAI || G.phase === 'gameover') { host.innerHTML = ''; host.style.display = 'none'; return; }
+    let p = null;
+    if (G) {
+      if (isOnline()) p = G.players[onlineSeat() >= 0 ? onlineSeat() : G.turn];
+      else if (UI.humans === 1) p = G.players.find(player => !player.isAI) || G.players[G.turn];
+      else p = G.players[G.turn];
+    }
+    if (!p) { host.innerHTML = ''; host.style.display = 'none'; return; }
     host.style.display = '';
     const b = E.bonuses(G, p);
     let chips = '';
@@ -855,23 +861,30 @@
         let st = '';
         g.ids.forEach((id, idx) => {
           const mc = byId[id];
-          st += `<div class="mini-card${idx ? ' stacked' : ''}${E.isPokemart(mc) ? ' pm-mini' : ''}" data-zoom="${mc.img}" role="button" tabindex="0" data-focus-key="owned-${i}-${id}" aria-label="查看${mc.name}"><img src="${mc.img}" alt=""></div>`;
+          st += `<div class="mini-card${idx ? ' stacked' : ''}${E.isPokemart(mc) ? ' pm-mini' : ''}" data-card="${id}" data-zoom="${mc.img}" role="button" tabindex="0" data-focus-key="owned-${i}-${id}" aria-label="查看${mc.name}"><img src="${mc.img}" alt=""></div>`;
         });
         stacks += `<div class="color-stack"><div class="ministack">${st}</div></div>`;
       }
       // reserve: revealed only for YOUR OWN hand; others show card-backs.
       // (online, opponents' reserves arrive as {hidden,tier} stubs, never real ids.)
-      const revealReserve = !p.isAI && (isOnline() ? (i === onlineSeat()) : active);
+      const revealReserve = !p.isAI && (isOnline() ? (i === onlineSeat()) : (UI.humans === 1 ? true : active));
       let rz = '';
       if (p.reserve.length) {
         const cards = p.reserve.map(rid => {
           const stub = (rid && typeof rid === 'object');
           const realId = stub ? null : rid;
           const tier = stub ? rid.tier : byId[realId].tier;
-          if (revealReserve && !stub) return `<div class="mini-card${UI.selCard === realId ? ' selected' : ''}${E.isPokemart(byId[realId]) ? ' pm-mini' : ''}" data-zoom="${byId[realId].img}" data-reserve-capture="${realId}" role="button" tabindex="0" data-focus-key="reserve-${realId}" aria-label="选择保留的${byId[realId].name}"><img src="${byId[realId].img}" alt=""></div>`;
+          if (revealReserve && !stub) {
+            const card = byId[realId];
+            const canCapture = active && interactable() && !UI.pick.length && !!affordInfo(card);
+            return `<div class="reserve-card-item">
+              <div class="mini-card${UI.selCard === realId ? ' selected' : ''}${E.isPokemart(card) ? ' pm-mini' : ''}" data-card="${realId}" data-zoom="${card.img}" data-reserve-capture="${realId}" role="button" tabindex="0" data-focus-key="reserve-${realId}" aria-label="查看保留的${card.name}"><img src="${card.img}" alt=""></div>
+              <button class="reserve-capture-btn" data-reserve-direct="${realId}" ${canCapture ? '' : 'disabled'} aria-label="捕捉保留卡${card.name}">捕捉</button>
+            </div>`;
+          }
           return `<div class="mini-card card-back" data-tier="${tier}"></div>`;
         }).join('');
-        const hint = revealReserve ? '（点击可捕捉）' : '';
+        const hint = revealReserve ? '（悬停查看）' : '';
         rz = `<div class="reserve-zone"><div class="rz-title">保留区 (${p.reserve.length})${hint}</div><div class="pcards">${cards}</div></div>`;
       }
       const permanent = E.COLORS.map(c => `<div class="player-bonus" aria-label="${BALL_NAMES[c]}永久资源${b[c]}个">${ball(c, 'sm')}<b>${b[c]}</b></div>`).join('');
@@ -1684,8 +1697,14 @@
         runConfirmed({ title: '确认进化？', copy: `${from.name} 将进化为 ${to.name}。`, visual: cardConfirmVisual(to), confirmLabel: '确认进化' }, () => doEvolve(b.dataset.evoFrom, b.dataset.evoTo));
       }
     });
-    // own-reserve capture: clicking a revealed reserve mini-card selects it
+    // Own reserve cards provide a direct capture button; tapping the card itself still
+    // opens the large reader for touch devices.
     $('#players').addEventListener('click', (e) => {
+      const direct = e.target.closest('[data-reserve-direct]');
+      if (direct) {
+        if (!direct.disabled && interactable() && !UI.pick.length) confirmCardAction('capture', direct.dataset.reserveDirect);
+        return;
+      }
       const mc = e.target.closest('[data-reserve-capture]');
       if (mc && interactable()) {
         UI.selCard = mc.dataset.reserveCapture; UI.selDeck = null; UI.pick = [];

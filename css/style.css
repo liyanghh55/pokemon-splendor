@@ -483,10 +483,16 @@ body.tutorial-choice-open #tut-mask,body.tutorial-choice-open #tut-bubble{visibi
 .pcards{display:flex;gap:6px;flex-wrap:wrap}
 .color-stack{position:relative}
 .color-stack .ministack{display:flex;flex-direction:column}
-.mini-card{width:42px;height:56px;border-radius:5px;overflow:hidden;border:1px solid #000;box-shadow:0 1px 3px rgba(0,0,0,.5);cursor:pointer}
+.mini-card{position:relative;width:42px;height:56px;border-radius:5px;overflow:hidden;border:1px solid #000;box-shadow:0 1px 3px rgba(0,0,0,.5);cursor:pointer;transition:border-color .14s,box-shadow .14s,transform .14s}
 .mini-card img{width:100%;height:100%;object-fit:cover}
 .mini-card.pm-mini img{object-fit:cover;object-position:center;background:#61c9dc}
 .mini-card.stacked{margin-top:-44px}
+@media (hover:hover) and (pointer:fine){
+  .player-hover-details .mini-card:hover,.player-hover-details .mini-card:focus{z-index:3;border-color:#ffda67;box-shadow:0 0 0 2px rgba(255,218,103,.24),0 5px 12px rgba(0,0,0,.5);transform:translateY(-2px)}
+}
+.reserve-card-item{display:grid;grid-template-columns:42px;gap:4px;justify-items:stretch}
+.reserve-capture-btn{min-height:24px;padding:3px 4px;border:1px solid #d5a42c;border-radius:5px;color:#513500;background:linear-gradient(180deg,#ffe987,#eebb35);font-size:10px;font-weight:900;line-height:1}
+.reserve-capture-btn:disabled{opacity:.42;filter:saturate(.35);cursor:not-allowed}
 /* face-down reserve backs: tier-correct art for base and PokéMart cards */
 .mini-card.card-back{background:linear-gradient(135deg,#3a2a6e,#221a4a) center/cover no-repeat}
 .mini-card.card-back[data-tier="stage1"]{background-image:linear-gradient(rgba(8,10,30,.5),rgba(8,10,30,.65)),url(../assets/backs/stage1.webp)}
@@ -519,8 +525,8 @@ body.tutorial-choice-open #tut-mask,body.tutorial-choice-open #tut-bubble{visibi
 @keyframes bounce{0%,80%,100%{transform:scale(.6);opacity:.5}40%{transform:scale(1);opacity:1}}
 
 /* desktop card hover detail */
-#zoom{position:fixed;z-index:80;pointer-events:none;display:flex;width:min(418px,calc(100vw - 16px));color:#e9f7fb;background:#07242d;border:2px solid #3f91a7;border-radius:16px;overflow:hidden;box-shadow:0 14px 32px rgba(4,30,39,.46)}
-#zoom img{width:158px;height:211px;object-fit:cover;flex:none;background:#0c1030;border-right:1px solid rgba(132,208,222,.42)}
+#zoom{position:fixed;z-index:80;pointer-events:none;display:grid;grid-template-columns:202px minmax(0,1fr);align-items:stretch;width:min(500px,calc(100vw - 16px));min-height:270px;color:#e9f7fb;background:#07242d;border:2px solid #3f91a7;border-radius:16px;overflow:hidden;box-shadow:0 14px 32px rgba(4,30,39,.46)}
+#zoom img{width:100%;height:100%;min-height:270px;object-fit:cover;background:#0c1030;border-right:1px solid rgba(132,208,222,.42)}
 #zoom-info{min-width:0;flex:1;padding:13px 15px;background:linear-gradient(155deg,#092b34,#061e26);font-size:12px;line-height:1.35}
 .zoom-kicker{color:#a8d1dc;font-size:11px;font-weight:800;letter-spacing:.08em}.zoom-title{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin:3px 0 12px;color:#ffda67}.zoom-title strong{font-size:19px;line-height:1.15}.zoom-title>b{font-size:20px;white-space:nowrap}.zoom-title small{font-size:11px;margin-left:2px}.zoom-group{margin-top:10px}.zoom-label{display:block;color:#b3d0d9;font-size:11px;font-weight:800;margin-bottom:5px}.zoom-tokens{display:flex;flex-wrap:wrap;gap:5px}.zoom-token{display:inline-flex;align-items:center;gap:3px;color:#eefbff;font-weight:800;white-space:nowrap}.zoom-token .ball{width:24px;height:24px}.zoom-none{color:#90b6c0}.zoom-line{display:flex;align-items:baseline;gap:7px;margin-top:12px;color:#b3d0d9;font-weight:800}.zoom-line b{color:#ffda67}.zoom-effect{margin:-4px 0 9px;color:#8de1b6;font-weight:800}
 
@@ -597,7 +603,7 @@ body.tutorial-choice-open #tut-mask,body.tutorial-choice-open #tut-bubble{visibi
   .card,.deck-pile{scroll-snap-align:start}
 
   .sel-preview{width:calc(var(--card-w) * 1.7)}
-  body.has-card-selection #supply,body.has-card-selection #my-resources{display:none !important}
+  body.has-card-selection #supply{display:none !important}
   body.has-card-selection #action-bar .act-buttons{position:sticky;bottom:-8px;z-index:3;margin:8px -8px -8px;padding:12px 8px 8px;background:linear-gradient(transparent,rgba(29,35,80,.98) 24%)}
   body.has-card-selection .pay-ledger{max-height:132px;overflow:auto}
   .toast{top:calc(var(--sa-t) + 58px);bottom:auto}
