@@ -4,12 +4,23 @@
 
 支持 **2–4 人本地热座**（pass-and-play）、**电脑对手**（新手 / 普通 / 高手 / 究极四档）与**在线联机对战**（房间码 + 邀请链接）。另含两套可选**扩展**（超级进化 Megas、PokéMart 商店）、零基础**新手教程**、**Mega 教程**与覆盖 6 种道具的**PokéMart 互动教程**。
 
+> **在线体验：** [pokemon-splendor.945170309.workers.dev](https://pokemon-splendor.945170309.workers.dev/)
+
+## 项目亮点
+
+- **完整网页版桌游体验**：拿球、捕捉、保留、进化、计分与回合结算均由规则引擎统一校验。
+- **固定式游戏棋盘**：三阶宝可梦市场铺满对齐，传说 / 稀有牌独立陈列，卡牌与盲抽操作位于对应牌堆右侧。
+- **清晰的交互反馈**：关键操作均有二次确认；卡牌和玩家资料通过悬停面板展示，避免棋盘在游戏过程中跳动。
+- **多种对战方式**：支持本地热座、四档电脑难度以及基于房间码的 Cloudflare 在线联机。
+- **响应式与离线支持**：兼容桌面和移动端，内置 PWA 清单与 Service Worker 离线缓存。
+
 > 卡牌美术与数值均源自 Tabletop Simulator 模组「**璀璨宝石：宝可梦（自动脚本）**」。由于模组只把分值写进卡面，本项目用视觉识别从 100 张原始卡面逐张提取了：捕捉成本、折扣球、奖杯点数、进化目标与进化花费，并经二次复核 + 标签交叉校验。
 
 ## 直接游玩
 
-双击打开 `index.html` 即可（纯静态，无需服务器）。
-若浏览器对本地文件有跨域限制，用任意静态服务器起一个本地服务：
+推荐直接打开上方的在线体验地址，无需安装。
+
+需要在本地运行时，双击打开 `index.html` 即可（纯静态，无需服务器）。若浏览器对本地文件有跨域限制，可启动一个静态服务器：
 
 ```bash
 # 任选其一（在本目录下执行）
@@ -20,6 +31,13 @@ npx serve .
 然后访问 http://localhost:8000 。
 
 刷新或退出后，开局界面会提供「▶ 继续上一局」——每个回合边界都会把对局快照存到 `localStorage`。
+
+## 界面与操作
+
+- 精灵球在左侧供应区选择，并使用供应区底部固定的“确认 / 取消”按钮提交。
+- 宝可梦卡与普通牌堆的“捕捉 / 保留 / 盲抽保留”按钮固定在右侧，不需要切换到额外操作栏。
+- 鼠标悬停在卡牌上可查看完整费用、奖励与进化信息；右侧空间不足时详情会自动显示在卡牌左侧。
+- 玩家栏高度固定，悬停或键盘聚焦后显示手中精灵球、永久资源、捕捉卡与保留卡详情。
 
 ## 在线联机对战
 
@@ -65,7 +83,7 @@ data/cards.json     卡牌数据库（供 Node 测试）· data/megas.json · da
 assets/cards/       100 张基础卡面 + 30 张 PokéMart 卡面 + 牌背
 manifest.json sw.js PWA 清单与离线缓存
 test/               Node 单元测试（引擎 / AI / 扩展 / 联机房间）
-wrangler.jsonc      Cloudflare 部署配置（静态资源 + Durable Object + 自定义域名）
+wrangler.jsonc      Cloudflare 部署配置（静态资源 + Durable Object + workers.dev）
 ```
 
 ## 开发与测试
@@ -82,7 +100,7 @@ node test/pokemart.test.js # PokéMart 商店扩展
 ## 部署
 
 - **纯静态**（单机热座 + AI）：任意静态托管即可（如 GitHub Pages），双击 `index.html` 同款。
-- **含联机**：用 Cloudflare Workers 部署（`npx wrangler deploy`）。`wrangler.jsonc` 已配置 ASSETS 静态资源绑定、`Room` Durable Object 与自定义域名；Worker 把 `/room/:code/ws` 路由到对应房间的 DO，其余路径回退静态资源。
+- **含联机**：用 Cloudflare Workers 部署（`npx wrangler deploy`）。`wrangler.jsonc` 已配置 ASSETS 静态资源绑定、`Room` Durable Object 与 `workers.dev` 地址；Worker 把 `/room/:code/ws` 路由到对应房间的 DO，其余路径回退静态资源。若要改用自定义域名，请先把域名 Zone 添加到同一 Cloudflare 账号，再在配置中添加 `custom_domain` 路由。
 
 ## 致谢
 

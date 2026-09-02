@@ -18,75 +18,66 @@
 <body>
   <!-- ===== Setup / menu screen ===== -->
   <div id="setup" class="screen">
-    <div class="setup-card">
-      <h1 class="brand"><span class="brand-splendor">璀璨宝石</span><span class="brand-dot">·</span><span class="brand-pkmn">宝可梦</span></h1>
-      <p id="setup-goal" class="tagline" aria-live="polite">收集精灵球，捕捉并进化宝可梦，率先达到 18 分成为冠军训练家！</p>
-
-      <div class="setup-row">
-        <label>玩家人数</label>
-        <div id="player-count" class="seg" role="group" aria-label="玩家人数">
-          <button data-n="2" class="active" aria-pressed="true">2</button>
-          <button data-n="3" aria-pressed="false">3</button>
-          <button data-n="4" aria-pressed="false">4</button>
+    <div class="setup-shell">
+      <section class="setup-hero" aria-labelledby="setup-title">
+        <p class="eyebrow">POKÉMON SPLENDOR · TABLETOP ADVENTURE</p>
+        <h1 id="setup-title" class="brand"><span class="brand-splendor">璀璨宝石</span><span class="brand-dot">·</span><span class="brand-pkmn">宝可梦</span></h1>
+        <p id="setup-goal" class="tagline" aria-live="polite">收集精灵球，捕捉并进化宝可梦，率先达到 18 分成为冠军训练家！</p>
+        <div class="hero-route" aria-label="游戏流程">
+          <div><b>01</b><span>组建训练家队伍</span></div>
+          <div><b>02</b><span>收集精灵球与伙伴</span></div>
+          <div><b>03</b><span>完成进化，成为冠军</span></div>
         </div>
-      </div>
-
-      <div id="seats" class="seats"></div>
-
-      <fieldset class="exp-picker">
-        <legend>可选扩展</legend>
-        <label class="exp-card">
-          <input type="checkbox" id="opt-megas">
-          <span class="exp-icon" aria-hidden="true">⚡</span>
-          <span class="exp-copy"><strong>超级进化 <small>Megas</small></strong><span>新增 Mega 代币与第 4 级卡，适合进阶挑战</span></span>
-        </label>
-        <label class="exp-card">
-          <input type="checkbox" id="opt-pokemart">
-          <span class="exp-icon" aria-hidden="true">🛒</span>
-          <span class="exp-copy"><strong>PokéMart 商店</strong><span>每级新增 2 张道具，带来复制、抵款与连锁取卡</span></span>
-        </label>
-      </fieldset>
-
-      <div class="setup-actions">
-        <button id="start-btn" class="primary">开始游戏</button>
-        <button id="rules-btn" class="ghost">规则说明</button>
-      </div>
-      <section class="academy" aria-labelledby="academy-title">
-        <div class="academy-head">
-          <div><strong id="academy-title">训练家学院</strong><span>建议先学基础，再挑战扩展</span></div>
-          <span class="academy-time">约 5 分钟上手</span>
+        <div class="hero-showcase" aria-hidden="true">
+          <div class="hero-card hero-card--rare"></div><div class="hero-card hero-card--stage"></div>
+          <span class="hero-ball hero-ball--red"></span><span class="hero-ball hero-ball--blue"></span><span class="hero-ball hero-ball--gold"></span>
+          <span class="hero-spark hero-spark--one">✦</span><span class="hero-spark hero-spark--two">✦</span>
         </div>
-        <div class="setup-actions setup-tutorials">
-          <button id="tutorial-btn" class="tutorial-featured">🎓 基础入门 <small>零基础推荐</small></button>
-          <button id="tutorial-mega-btn" class="ghost">⚡ Mega 进阶</button>
-          <button id="tutorial-pokemart-btn" class="ghost">🛒 PokéMart 教程</button>
-        </div>
+        <div class="hero-modes"><span>本地热座</span><span>电脑对手</span><span>在线联机</span></div>
       </section>
-      <div class="setup-actions setup-online">
-        <button id="online-create" class="ghost">🌐 创建联机房间</button>
-        <button id="online-join" class="ghost">🔗 加入房间</button>
+
+      <div class="setup-card">
+        <div class="setup-panel-head"><div><span class="panel-kicker">NEW ADVENTURE</span><h2>配置你的对局</h2></div><span class="panel-step">准备阶段</span></div>
+        <div class="setup-row">
+          <label>玩家人数</label>
+          <div id="player-count" class="seg" role="group" aria-label="玩家人数">
+            <button data-n="2" class="active" aria-pressed="true">2</button><button data-n="3" aria-pressed="false">3</button><button data-n="4" aria-pressed="false">4</button>
+          </div>
+        </div>
+        <div id="seats" class="seats"></div>
+        <fieldset class="exp-picker">
+          <legend>可选扩展</legend>
+          <label class="exp-card"><input type="checkbox" id="opt-megas"><span class="exp-icon" aria-hidden="true">⚡</span><span class="exp-copy"><strong>超级进化 <small>Megas</small></strong><span>新增 Mega 代币与第 4 级卡，适合进阶挑战</span></span></label>
+          <label class="exp-card"><input type="checkbox" id="opt-pokemart"><span class="exp-icon" aria-hidden="true">🛒</span><span class="exp-copy"><strong>PokéMart 商店</strong><span>每级新增 2 张道具，带来复制、抵款与连锁取卡</span></span></label>
+        </fieldset>
+        <div class="setup-actions setup-actions--primary"><button id="start-btn" class="primary">开始游戏 <span aria-hidden="true">→</span></button><button id="rules-btn" class="ghost">规则说明</button></div>
+        <section class="academy" aria-labelledby="academy-title">
+          <div class="academy-head"><div><strong id="academy-title">训练家学院</strong><span>建议先学基础，再挑战扩展</span></div><span class="academy-time">约 5 分钟上手</span></div>
+          <div class="setup-actions setup-tutorials"><button id="tutorial-btn" class="tutorial-featured">🎓 基础入门 <small>零基础推荐</small></button><button id="tutorial-mega-btn" class="ghost">⚡ Mega 进阶</button><button id="tutorial-pokemart-btn" class="ghost">🛒 PokéMart 教程</button></div>
+        </section>
+        <div class="online-divider"><span>或与朋友一起玩</span></div>
+        <div class="setup-actions setup-online"><button id="online-create" class="ghost">🌐 创建联机房间</button><button id="online-join" class="ghost">🔗 加入房间</button></div>
+        <div class="credit">素材源自 TTS 模组「璀璨宝石：宝可梦」 · 卡牌数据由原始卡面提取</div>
       </div>
-      <div class="credit">素材源自 TTS 模组「璀璨宝石：宝可梦」 · 卡牌数据由原始卡面提取</div>
     </div>
   </div>
 
   <!-- ===== Online lobby ===== -->
   <div id="lobby" class="screen hidden">
-    <div class="setup-card">
-      <h1 class="brand" style="font-size:clamp(22px,6vw,30px)"><span class="brand-splendor">联机房间</span></h1>
-      <div class="lobby-code">房间码 <b id="lobby-code">—</b> <button id="lobby-copy" class="ghost small">复制邀请链接</button></div>
-      <div id="lobby-status" class="lobby-status" role="status" aria-live="polite"></div>
-      <div id="lobby-roster" class="lobby-roster" aria-live="polite" aria-label="房间玩家"></div>
-      <div class="setup-row lobby-exp">
-        <label>扩展</label>
-        <label class="exp-toggle"><input type="checkbox" id="lobby-megas"> 超级进化 (Megas)</label>
-        <label class="exp-toggle"><input type="checkbox" id="lobby-pokemart"> PokéMart</label>
+    <div class="lobby-shell">
+      <section class="lobby-hero" aria-hidden="true">
+        <p class="eyebrow">ONLINE LINK ESTABLISHED</p><h1 class="brand"><span class="brand-splendor">联机房间</span></h1>
+        <p>邀请训练家入队，准备共同踏上冠军之路。</p><div class="lobby-signal"><i></i><i></i><i></i><span>正在建立队伍</span></div>
+      </section>
+      <div class="setup-card lobby-card">
+        <div class="setup-panel-head"><div><span class="panel-kicker">ROOM LOBBY</span><h2>等待训练家入队</h2></div><span class="panel-step">联机准备</span></div>
+        <div class="lobby-code"><span>房间码</span> <b id="lobby-code">—</b> <button id="lobby-copy" class="ghost small">复制邀请链接</button></div>
+        <div id="lobby-status" class="lobby-status" role="status" aria-live="polite"></div>
+        <div id="lobby-roster" class="lobby-roster" aria-live="polite" aria-label="房间玩家"></div>
+        <div class="setup-row lobby-exp"><label>扩展</label><label class="exp-toggle"><input type="checkbox" id="lobby-megas"> 超级进化 (Megas)</label><label class="exp-toggle"><input type="checkbox" id="lobby-pokemart"> PokéMart</label></div>
+        <div class="setup-actions setup-actions--primary"><button id="lobby-start" class="primary">开始游戏 <span aria-hidden="true">→</span></button><button id="lobby-leave" class="ghost">离开房间</button></div>
+        <div class="lobby-hint">把邀请链接发给朋友；等他们加入后，房主点「开始游戏」。刷新或断线会自动用同一座位重连。</div>
       </div>
-      <div class="setup-actions">
-        <button id="lobby-start" class="primary">开始游戏</button>
-        <button id="lobby-leave" class="ghost">离开房间</button>
-      </div>
-      <div class="lobby-hint">把邀请链接发给朋友；等他们加入后，房主点「开始游戏」。刷新或断线会自动用同一座位重连。</div>
     </div>
   </div>
 
@@ -179,8 +170,30 @@
     </div>
   </div>
 
-  <!-- card zoom preview -->
-  <div id="zoom" class="hidden"><img id="zoom-img" alt="" /></div>
+  <!-- desktop card hover detail (visual only; touch devices use the inspect dialog) -->
+  <div id="zoom" class="hidden" aria-hidden="true">
+    <img id="zoom-img" alt="" />
+    <div id="zoom-info"></div>
+  </div>
+
+  <!-- ===== Final action confirmation ===== -->
+  <div id="confirm-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-copy">
+    <div class="confirm-box">
+      <div class="confirm-head">
+        <h2 id="confirm-title">确认操作？</h2>
+        <button id="confirm-close" class="confirm-close" aria-label="关闭确认窗口">×</button>
+      </div>
+      <div class="confirm-body">
+        <p id="confirm-copy"></p>
+        <div id="confirm-visual" class="confirm-visual"></div>
+        <div id="confirm-note" class="confirm-note"></div>
+      </div>
+      <div class="confirm-actions">
+        <button id="confirm-cancel" class="confirm-cancel">取消</button>
+        <button id="confirm-ok" class="primary">确认</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ===== Pokémart effect choice modal ===== -->
   <div id="choice-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="choice-title" aria-describedby="choice-hint">
